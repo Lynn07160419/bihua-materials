@@ -101,6 +101,7 @@ function syncSelectionControls() {
   $('#export-open').disabled = state.selecting && !count;
   $('#export-open').replaceChildren(icon('download'), document.createTextNode(state.selecting ? '导出所选' : '导出'));
   $('#clear-selection').disabled = !count;
+  $('#delete-selected').disabled = !count;
   $('#select-results').disabled = !items.length;
   $('#select-results').textContent = items.length && items.every(item => state.selectedIds.has(item.id)) ? '取消全选' : '全选当前结果';
   for (const card of $$('.material-card')) {
@@ -259,18 +260,35 @@ async function toggleClassic(item, node) {
 }
 function askDelete(item) {
   if (!item) return;
-  state.deleting = item; $('#delete-text').textContent = item.text; inlineError('#delete-error');
+  openDeleteConfirmation([item]);
+}
+function askDeleteSelection() {
+  const items = selectedMaterials(); if (!items.length) return;
+  openDeleteConfirmation(items, true);
+}
+function openDeleteConfirmation(items, batch = false) {
+  state.deleting = { items: [...items], batch };
+  $('#delete-title').textContent = batch ? `删除所选的 ${items.length} 条素材？` : '删除这条素材？';
+  $('#delete-text').textContent = batch ? items.map((item, index) => `${index + 1}. ${item.text}`).join('\n\n') : items[0].text;
+  $('#confirm-delete').textContent = batch ? `删除 ${items.length} 条` : '确认删除';
+  inlineError('#delete-error');
   $('#confirm-delete').disabled = false; $('#delete-dialog').showModal();
 }
 async function confirmDelete() {
-  const item = state.deleting; if (!item) return;
+  const pending = state.deleting; if (!pending) return;
   $('#confirm-delete').disabled = true;
   try {
-    await api(`/api/materials/${item.id}`, { method: 'DELETE' });
+    const ids = pending.items.map(item => item.id);
+    const result = pending.batch
+      ? await api('/api/materials', { method: 'DELETE', body: JSON.stringify({ ids }) })
+      : await api(`/api/materials/${ids[0]}`, { method: 'DELETE' });
     $('#delete-dialog').close();
-    if ($('#detail-dialog').open && state.detailId === item.id) $('#detail-dialog').close();
-    if ($('#editor-dialog').open && state.editing?.id === item.id) $('#editor-dialog').close();
-    await refresh({ force: true }); toast('素材已删除');
+    for (const id of ids) state.selectedIds.delete(id);
+    if ($('#detail-dialog').open && ids.includes(state.detailId)) $('#detail-dialog').close();
+    if ($('#editor-dialog').open && ids.includes(state.editing?.id)) $('#editor-dialog').close();
+    await refresh({ force: true });
+    toast(!pending.batch ? '素材已删除' : !result.deleted ? '所选素材已被其他成员删除'
+      : `已删除 ${result.deleted} 条素材${result.alreadyDeleted ? `，另有 ${result.alreadyDeleted} 条已被删除` : ''}`);
   } catch (error) { inlineError('#delete-error', error.message); }
   finally { $('#confirm-delete').disabled = false; }
 }
@@ -390,7 +408,7 @@ function downloadExport(format) {
     blobURL = URL.createObjectURL(new Blob([content], { type: format === 'csv' ? 'text/csv;charset=utf-8' : 'text/plain;charset=utf-8' }));
     link.href = blobURL;
     const label = format === 'csv' ? '完整表格' : format === 'lines' ? '一行一条' : '顿号连接';
-    link.download = `比划一下-所选${items.length}条-${label}.${format === 'csv' ? 'csv' : 'txt'}`;
+    link.download = `飞手传书-所选${items.length}条-${label}.${format === 'csv' ? 'csv' : 'txt'}`;
   } else { link.href = '/api/materials/export?' + exportQuery(format); link.download = ''; }
   document.body.append(link); link.click(); link.remove(); $('#export-dialog').close();
   if (blobURL) setTimeout(() => URL.revokeObjectURL(blobURL), 1000);
@@ -503,6 +521,7 @@ $('#select-results').addEventListener('click', () => {
   syncSelectionControls();
 });
 $('#clear-selection').addEventListener('click', () => { state.selectedIds.clear(); syncSelectionControls(); });
+$('#delete-selected').addEventListener('click', askDeleteSelection);
 $('#load-more').addEventListener('click', () => {
   const fromIndex = state.limit; state.limit += 12; renderLibrary({ animate: true, fromIndex });
 });

@@ -5,6 +5,8 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { createApp } from '../server.mjs';
 import { parseMaterialCSV } from '../public/shared.js';
+import { DatabaseSync } from 'node:sqlite';
+import { createStore } from '../lib/store.mjs';
 
 async function start(dbPath, seed = false) {
   const app = createApp({ dbPath, seed });
@@ -17,6 +19,46 @@ async function start(dbPath, seed = false) {
   };
   return { ...app, request, close: () => new Promise((resolve, reject) => { app.server.close(error => error ? reject(error) : resolve()); app.server.closeIdleConnections(); }) };
 }
+
+test('批量删除限定所选 ID，校验整批参数，兼容已删除项并持久保留结果', async t => {
+  const directory = await mkdtemp(join(tmpdir(), 'bihua-bulk-delete-'));
+  const filename = join(directory, 'materials.sqlite');
+  let app = await start(filename);
+  t.after(async () => { await app.close(); await rm(directory, { recursive: true, force: true }); });
+  const first = app.store.add({ text: '待删词语', type: 'general' });
+  const second = app.store.add({ text: '待删歌词', type: 'lyrics' });
+  const keep = app.store.add({ text: '保留的句子', type: 'sentence' });
+  for (const body of [{}, { ids: [] }, { ids: first.id }, { ids: [first.id, null] }, { ids: [first.id, '错误 ID'] }, { ids: Array(5001).fill(first.id) }]) {
+    assert.equal((await app.request('/api/materials', 'DELETE', body)).status, 400);
+    assert.equal(app.store.list().length, 3);
+  }
+  assert.equal((await app.request('/api/materials', 'DELETE')).status, 415);
+  assert.equal((await app.request('/api/materials', 'DELETE', { ids: [first.id] }, { Origin: 'https://example.com' })).status, 403);
+  assert.equal(app.store.list().length, 3);
+  const deleted = await app.request('/api/materials', 'DELETE', { ids: [first.id, second.id, first.id, 'already-deleted-id'] });
+  assert.equal(deleted.status, 200);
+  assert.deepEqual(deleted.data, { deleted: 2, alreadyDeleted: 1 });
+  assert.deepEqual(app.store.list(), [keep]);
+  assert.deepEqual((await app.request('/api/materials', 'DELETE', { ids: [first.id, second.id] })).data, { deleted: 0, alreadyDeleted: 2 });
+  await app.close(); app = await start(filename, true);
+  assert.deepEqual(app.store.list(), [keep]);
+  assert.equal((await app.request('/api/materials/' + first.id)).status, 404);
+});
+
+test('批量删除遇到数据库错误时整批回滚，失败后仍可再次操作', async t => {
+  const directory = await mkdtemp(join(tmpdir(), 'bihua-delete-rollback-'));
+  const filename = join(directory, 'materials.sqlite');
+  const store = createStore(filename, { seed: false }), control = new DatabaseSync(filename);
+  t.after(async () => { control.close(); store.close(); await rm(directory, { recursive: true, force: true }); });
+  const first = store.add({ text: '回滚验证一', type: 'general' });
+  const second = store.add({ text: '回滚验证二', type: 'general' });
+  control.exec(`CREATE TRIGGER reject_delete BEFORE DELETE ON materials WHEN OLD.id = '${second.id}' BEGIN SELECT RAISE(ABORT, '模拟删除失败'); END;`);
+  assert.throws(() => store.removeMany([first.id, second.id]), /模拟删除失败/);
+  assert.deepEqual(new Set(store.list().map(item => item.id)), new Set([first.id, second.id]));
+  control.exec('DROP TRIGGER reject_delete');
+  assert.deepEqual(store.removeMany([first.id, second.id]), { deleted: 2, alreadyDeleted: 0 });
+  assert.deepEqual(store.list(), []);
+});
 
 test('共享素材 API：录入、筛选、修改、导入、导出与持久化', async t => {
   const directory = await mkdtemp(join(tmpdir(), 'bihua-api-'));

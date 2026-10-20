@@ -50,7 +50,7 @@ export function createApp({ dbPath = join(root, 'data', 'materials.sqlite'), see
         const items = store.list(filters);
         const suffix = format === 'csv' ? 'csv' : 'txt';
         const label = format === 'dunhao' ? '顿号连接' : format === 'lines' ? '一行一条' : '完整表格';
-        const name = `比划一下-${label}-${new Date().toLocaleDateString('sv-SE', { timeZone: 'Asia/Shanghai' })}.${suffix}`;
+        const name = `飞手传书-${label}-${new Date().toLocaleDateString('sv-SE', { timeZone: 'Asia/Shanghai' })}.${suffix}`;
         response.writeHead(200, { 'Content-Type': format === 'csv' ? 'text/csv; charset=utf-8' : 'text/plain; charset=utf-8', 'Content-Disposition': `attachment; filename*=UTF-8''${encodeURIComponent(name)}`, 'Cache-Control': 'no-store' });
         return response.end(format === 'csv' ? materialsCSV(items) : materialsText(items, format));
       }
@@ -69,6 +69,10 @@ export function createApp({ dbPath = join(root, 'data', 'materials.sqlite'), see
       if (path === '/api/materials') {
         if (method === 'GET') return sendJSON(response, 200, { items: store.list(filters) });
         if (method === 'POST') return sendJSON(response, 201, { item: store.add(await readJSON(request)) });
+        if (method === 'DELETE') {
+          const body = await readJSON(request);
+          return sendJSON(response, 200, store.removeMany(body?.ids));
+        }
         throw new StoreError('不支持这个操作', 405);
       }
       const match = path.match(/^\/api\/materials\/([a-zA-Z0-9-]+)$/);
@@ -109,7 +113,7 @@ if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.ur
     process.exit(1);
   });
   server.listen(port, '0.0.0.0', () => {
-    console.log(`\n比划一下 · 游戏素材库\n本机预览：http://localhost:${port}`);
+    console.log(`\n飞手传书 · 游戏素材库\n本机预览：http://localhost:${port}`);
     for (const network of Object.values(networkInterfaces())) for (const address of network || []) {
       if (address.family === 'IPv4' && !address.internal) console.log(`局域网访问：http://${address.address}:${port}`);
     }

@@ -89,6 +89,19 @@ export function createStore(filename, { seed = true } = {}) {
       return fromRow(select.get(id));
     },
     remove(id) { this.get(id); db.prepare('DELETE FROM materials WHERE id = ?').run(id); },
+    removeMany(ids) {
+      if (!Array.isArray(ids) || !ids.length) throw new StoreError('请先选择需要删除的素材');
+      if (ids.length > 5000) throw new StoreError('一次最多删除 5000 条素材');
+      if (ids.some(id => typeof id !== 'string' || !/^[a-zA-Z0-9-]{1,128}$/.test(id))) throw new StoreError('所选素材编号格式不正确');
+      const uniqueIds = [...new Set(ids)], remove = db.prepare('DELETE FROM materials WHERE id = ?');
+      let deleted = 0;
+      db.exec('BEGIN IMMEDIATE');
+      try {
+        for (const id of uniqueIds) deleted += Number(remove.run(id).changes);
+        db.exec('COMMIT');
+      } catch (error) { db.exec('ROLLBACK'); throw error; }
+      return { deleted, alreadyDeleted: uniqueIds.length - deleted };
+    },
     import(items, { preview = false } = {}) {
       const result = previewImport(items);
       const { normalized, ...report } = result;
