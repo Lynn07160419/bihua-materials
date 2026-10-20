@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#faf9f5">
+  <meta name="description" content="你比划我猜、传词游戏的共享素材库。一起收集好题，随时开猜。">
+  <title>比划一下 · 游戏素材库</title>
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+  <link rel="stylesheet" href="/styles.css">
+  <script type="module" src="/app.js"></script>
+</head>
+<body>
+  <svg class="svg-sprite" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+    <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+    <symbol id="i-search" viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 4.5 4.5"/></symbol>
+    <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M4 12h16m-6-6 6 6-6 6"/></symbol>
+    <symbol id="i-close" viewBox="0 0 24 24"><path d="m6 6 12 12M6 18 18 6"/></symbol>
+    <symbol id="i-star" viewBox="0 0 24 24"><path d="m12 3 2.8 5.8 6.4.9-4.6 4.5 1.1 6.3-5.7-3-5.7 3 1.1-6.3-4.6-4.5 6.4-.9Z"/></symbol>
+    <symbol id="i-download" viewBox="0 0 24 24"><path d="M12 3v12m-5-5 5 5 5-5M4 16v4h16v-4"/></symbol>
+    <symbol id="i-upload" viewBox="0 0 24 24"><path d="M12 16V4m-5 5 5-5 5 5M4 16v4h16v-4"/></symbol>
+    <symbol id="i-trash" viewBox="0 0 24 24"><path d="M3 6h18M9 6V3h6v3M5 6l1 15h12l1-15M10 10v7m4-7v7"/></symbol>
+    <symbol id="i-edit" viewBox="0 0 24 24"><path d="m15 4 5 5M4 20l5-1L21 7a2 2 0 0 0-5-5L4 14Z"/></symbol>
+    <symbol id="i-eye" viewBox="0 0 24 24"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></symbol>
+    <symbol id="i-hide" viewBox="0 0 24 24"><path d="m3 3 18 18M10.6 5.1 12 5c6.5 0 10 7 10 7a18 18 0 0 1-3 3.8M6.5 6.5A20 20 0 0 0 2 12s3.5 7 10 7c1.7 0 3.2-.5 4.5-1.2M10 10a3 3 0 0 0 4 4"/></symbol>
+    <symbol id="i-full" viewBox="0 0 24 24"><path d="M9 3H3v6m12-6h6v6M3 15v6h6m6 0h6v-6"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></symbol>
+    <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M20 10a8 8 0 1 0 0 5M20 4v6h-6"/></symbol>
+    <symbol id="i-leaf" viewBox="0 0 32 32"><path d="M16 27V14M16 20C3 21 4 9 4 9s12-2 12 11Zm0-6C16 3 28 4 28 4s1 12-12 10Z"/></symbol>
+    <symbol id="i-spark" viewBox="0 0 32 32"><path d="m16 2 3 10 11 4-11 4-3 10-4-10-10-4 10-4Z"/></symbol>
+    <symbol id="i-library" viewBox="0 0 24 24"><path d="M4 4h5v16H4Zm8 0h4v16h-4Zm6 0 4 15"/></symbol>
+  </svg>
+
+  <header class="site-header wrap">
+    <a class="brand" href="/" aria-label="比划一下首页"><span class="brand-mark" aria-hidden="true">✳</span>比划一下</a>
+    <nav class="main-nav" aria-label="主导航">
+      <button class="nav-button active" id="nav-library" type="button">素材库</button>
+      <button class="nav-button" id="nav-game" type="button">现在玩</button>
+    </nav>
+    <div class="header-end"><span class="sr-only" id="sync-status" role="status" aria-label="连接中"></span><button class="button button-dark header-add" id="header-add" type="button"><svg class="icon"><use href="#i-plus"/></svg><span>添加素材</span></button></div>
+  </header>
+
+  <main>
+    <section id="library-view" class="wrap">
+      <div class="hero">
+        <h1>把快乐，<span class="hero-highlight">比划出来<svg class="hero-underline" viewBox="0 0 420 18" aria-hidden="true"><path d="M5 12Q193-1 411 8"/></svg></span></h1>
+        <button class="button all-categories" id="all-categories" type="button"><svg class="icon"><use href="#i-library"/></svg>全部素材</button>
+      </div>
+
+      <nav class="collections" aria-label="素材栏目">
+        <button class="collection" data-group="evergreen" type="button"><span class="collection-icon green"><svg class="icon"><use href="#i-leaf"/></svg></span><span class="collection-name">长盛不衰</span><span class="collection-count" id="count-evergreen">0</span></button>
+        <button class="collection" data-group="trending" type="button"><span class="collection-icon pink"><svg class="icon"><use href="#i-spark"/></svg></span><span class="collection-name">引领潮流</span><span class="collection-count" id="count-trending">0</span></button>
+        <button class="collection" data-group="classic" type="button"><span class="collection-icon yellow"><svg class="icon"><use href="#i-star"/></svg></span><span class="collection-name">经典永流传</span><span class="collection-count" id="count-classic">0</span></button>
+      </nav>
+
+      <div class="subcategory-row">
+        <nav id="subcategory-nav" class="subcategory-nav" aria-label="子分类">
+          <button class="subcategory active" data-type="all" type="button" aria-pressed="true"><span>全部</span><span class="subcategory-count">0</span></button>
+          <button class="subcategory" data-type="poetry" data-parent="evergreen" type="button" aria-pressed="false"><span>诗词</span><span class="subcategory-count">0</span></button>
+          <button class="subcategory" data-type="general" data-parent="evergreen" type="button" aria-pressed="false"><span>经典词语</span><span class="subcategory-count">0</span></button>
+          <button class="subcategory" data-type="sentence" data-parent="evergreen" type="button" aria-pressed="false"><span>经典句子</span><span class="subcategory-count">0</span></button>
+          <button class="subcategory" data-type="meme" data-parent="trending" type="button" aria-pressed="false"><span>梗句</span><span class="subcategory-count">0</span></button>
+          <button class="subcategory" data-type="lyrics" data-parent="trending" type="button" aria-pressed="false"><span>歌词</span><span class="subcategory-count">0</span></button>
+        </nav>
+      </div>
+
+      <section class="library-section" aria-label="素材列表">
+        <div class="library-heading">
+          <div class="heading-title"><h2 id="library-title">所有素材</h2><span id="result-count" class="result-count" aria-live="polite">…</span></div>
+          <div class="library-actions"><button class="button button-plain" id="selection-toggle" type="button" aria-pressed="false">多选</button><button class="button button-plain" id="export-open" type="button"><svg class="icon"><use href="#i-download"/></svg>导出</button><button class="button button-lilac" id="import-open" type="button"><svg class="icon"><use href="#i-upload"/></svg>批量导入</button></div>
+        </div>
+        <div class="filter-row">
+          <label class="search-box"><svg class="icon"><use href="#i-search"/></svg><span class="sr-only">搜索素材</span><input id="search" type="search" placeholder="搜个词，找点灵感" autocomplete="off"></label>
+          <div id="selection-tools" class="selection-tools" hidden><span id="selection-count" aria-live="polite">已选 0 条</span><button class="text-button" id="select-results" type="button">全选当前结果</button><button class="text-button" id="clear-selection" type="button">清空选择</button></div>
+        </div>
+        <div id="material-grid" class="material-grid" role="region" aria-label="素材浏览区" tabindex="0" aria-live="polite"><p class="loading">正在打开题库…</p></div>
+        <div class="load-more-wrap"><button class="button button-outline" id="load-more" type="button" hidden>加载更多</button></div>
+      </section>
+      <button class="mobile-add button button-dark" id="mobile-add" type="button" aria-label="添加素材"><svg class="icon"><use href="#i-plus"/></svg></button>
+    </section>
+
+    <section id="game-view" class="wrap game-view" hidden>
+      <div class="game-heading"><div><h1>轮到你比划！</h1><button class="text-button" id="game-back" type="button">← 返回选题</button></div><div class="game-options"><label class="game-library-picker"><span class="sr-only">选择题库</span><select id="game-library"></select></label><div class="mode-switch" aria-label="玩法提示"><button class="mode-button active" data-mode="guess" type="button">你比划我猜</button><button class="mode-button" data-mode="relay" type="button">传词游戏</button></div></div></div>
+      <section class="game-stage" id="game-stage" aria-label="出题区">
+        <div class="stage-top"><span class="stage-label" id="game-counter">准备就绪</span><button class="icon-button" id="fullscreen-button" type="button" aria-label="全屏展示" title="全屏展示"><svg class="icon"><use href="#i-full"/></svg></button></div>
+        <div class="stage-content" id="stage-content" aria-live="polite"></div>
+        <div class="stage-controls" id="stage-controls"></div>
+      </section>
+      <div class="game-bottom"><span class="keyboard-tip">空格 显示／隐藏 · → 下一题</span><button class="text-button" id="restart-round" type="button" hidden><svg class="icon"><use href="#i-refresh"/></svg>重新抽题</button></div>
+    </section>
+  </main>
+
+  <dialog id="editor-dialog" class="modal editor-modal" aria-labelledby="editor-title">
+    <form id="editor-form">
+      <div class="modal-heading"><h2 id="editor-title">添加素材</h2><button class="icon-button" type="button" data-close="editor-dialog" aria-label="关闭"><svg class="icon"><use href="#i-close"/></svg></button></div>
+      <label class="field"><span>题目 <span class="required">*</span></span><textarea id="editor-text" name="text" rows="4" maxlength="10000" placeholder="一个词、一句歌词，或一个让人笑出声的梗" required></textarea></label>
+      <label class="field"><span>分类</span><select id="editor-type" name="type"><optgroup label="长盛不衰"><option value="poetry">诗词</option><option value="general">经典词语</option><option value="sentence">经典句子</option></optgroup><optgroup label="引领潮流"><option value="meme">梗句</option><option value="lyrics">歌词</option></optgroup></select></label>
+      <label class="field"><span>备注</span><textarea id="editor-notes" name="notes" rows="2" maxlength="2000" placeholder="歌名、出处，或玩法提示（可选）"></textarea></label>
+      <label class="checkbox-label"><input id="editor-classic" name="isClassic" type="checkbox"><svg class="icon"><use href="#i-star"/></svg>收进经典永流传</label>
+      <p id="editor-error" class="form-error" role="alert" hidden></p>
+      <div class="modal-footer"><button id="editor-delete" class="button button-danger-plain" type="button" hidden><svg class="icon"><use href="#i-trash"/></svg>删除</button><span class="spacer"></span><button class="button button-plain" type="button" data-close="editor-dialog">取消</button><button class="button button-dark" id="editor-save" type="submit">保存素材<svg class="icon"><use href="#i-check"/></svg></button></div>
+    </form>
+  </dialog>
+
+  <dialog id="detail-dialog" class="modal detail-modal" aria-labelledby="detail-title">
+    <div class="modal-heading"><span id="detail-type" class="type-label"></span><button class="icon-button" type="button" data-close="detail-dialog" aria-label="关闭"><svg class="icon"><use href="#i-close"/></svg></button></div>
+    <h2 id="detail-title" class="detail-text"></h2>
+    <p id="detail-notes" class="detail-notes" hidden></p>
+    <div class="modal-footer"><button class="button button-plain" id="detail-classic" type="button"></button><span class="spacer"></span><button class="icon-button danger" id="detail-delete" type="button" aria-label="删除这条素材" title="删除"><svg class="icon"><use href="#i-trash"/></svg></button><button class="button button-dark" id="detail-edit" type="button"><svg class="icon"><use href="#i-edit"/></svg>编辑</button></div>
+  </dialog>
+
+  <dialog id="import-dialog" class="modal import-modal" aria-labelledby="import-title">
+    <div class="modal-heading"><h2 id="import-title">批量导入</h2><button class="icon-button" type="button" data-close="import-dialog" aria-label="关闭"><svg class="icon"><use href="#i-close"/></svg></button></div>
+    <div class="import-tabs" role="tablist" aria-label="导入方式"><button id="tab-csv" class="import-tab active" role="tab" aria-selected="true" aria-controls="csv-panel" data-import-tab="csv" type="button">CSV 文件</button><button id="tab-paste" class="import-tab" role="tab" aria-selected="false" aria-controls="paste-panel" data-import-tab="paste" type="button">批量粘贴</button></div>
+    <div id="csv-panel" role="tabpanel" aria-labelledby="tab-csv">
+      <label class="dropzone" id="dropzone"><input type="file" id="csv-file" accept=".csv,text/csv" class="sr-only"><svg class="icon"><use href="#i-upload"/></svg><strong id="file-name">选择或拖入 CSV 文件</strong><span>最大 5 MB</span></label>
+      <a class="text-button template-link" href="/api/materials/template" download><svg class="icon"><use href="#i-download"/></svg>下载导入模板</a>
+    </div>
+    <div id="paste-panel" role="tabpanel" aria-labelledby="tab-paste" hidden>
+      <label class="field"><span>一行一条</span><textarea id="paste-text" rows="6" placeholder="孙悟空&#10;星星&#10;命运的齿轮开始转动了"></textarea></label>
+      <div class="field-pair"><label class="field"><span>统一分类</span><select id="paste-type"><optgroup label="长盛不衰"><option value="poetry">诗词</option><option value="general">经典词语</option><option value="sentence">经典句子</option></optgroup><optgroup label="引领潮流"><option value="meme">梗句</option><option value="lyrics">歌词</option></optgroup></select></label><label class="field"><span>统一难度</span><select id="paste-difficulty"><option value="easy">简单</option><option value="normal" selected>普通</option><option value="hard">挑战</option></select></label></div>
+      <label class="field"><span>标签</span><input id="paste-tags" placeholder="用顿号或逗号分隔（可选）"></label>
+    </div>
+    <p id="import-error" class="form-error" role="alert" hidden></p>
+    <div id="import-preview" hidden><div class="preview-summary" id="preview-summary" role="status"></div><ol id="preview-rows" class="preview-rows"></ol></div>
+    <div class="modal-footer"><button class="button button-plain" type="button" data-close="import-dialog">取消</button><span class="spacer"></span><button id="preview-import" class="button button-lilac" type="button">预览检查</button><button id="commit-import" class="button button-dark" type="button" disabled>确认导入<svg class="icon"><use href="#i-arrow"/></svg></button></div>
+  </dialog>
+
+  <dialog id="export-dialog" class="modal export-modal" aria-labelledby="export-title">
+    <div class="modal-heading"><h2 id="export-title">导出素材</h2><button class="icon-button" type="button" data-close="export-dialog" aria-label="关闭"><svg class="icon"><use href="#i-close"/></svg></button></div>
+    <p id="export-count" class="export-count"></p>
+    <button class="export-option" data-export="lines" type="button"><span><strong>一行一条</strong><span class="export-sample">孙悟空<br>星星<br>猫</span></span><span class="file-label">TXT<svg class="icon"><use href="#i-download"/></svg></span></button>
+    <button class="export-option" data-export="dunhao" type="button"><span><strong>顿号连接</strong><span class="export-sample">孙悟空、星星、猫</span></span><span class="file-label">TXT<svg class="icon"><use href="#i-download"/></svg></span></button>
+    <button class="export-option" data-export="csv" type="button"><span><strong>完整表格</strong><span class="export-sample">保留类型、标签、备注等信息</span></span><span class="file-label">CSV<svg class="icon"><use href="#i-download"/></svg></span></button>
+  </dialog>
+
+  <dialog id="delete-dialog" class="modal delete-modal" aria-labelledby="delete-title"><div class="modal-heading"><h2 id="delete-title">删除这条素材？</h2><button class="icon-button" type="button" data-close="delete-dialog" aria-label="取消删除"><svg class="icon"><use href="#i-close"/></svg></button></div><p id="delete-text" class="delete-text"></p><p id="delete-error" class="form-error" role="alert" hidden></p><div class="modal-footer"><span class="spacer"></span><button class="button button-plain" type="button" data-close="delete-dialog">取消</button><button class="button button-danger" id="confirm-delete" type="button">确认删除</button></div></dialog>
+  <div id="toast" class="toast" role="status" hidden></div>
+</body>
+</html>

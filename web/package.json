@@ -1,0 +1,12 @@
+{
+  "name": "bihua-materials",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "你比划我猜与传词游戏共享素材库",
+  "engines": { "node": ">=24" },
+  "scripts": {
+    "start": "node server.mjs",
+    "test": "node --test"
+  }
+}
