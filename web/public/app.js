@@ -4,7 +4,7 @@ const $ = selector => document.querySelector(selector);
 const $$ = selector => [...document.querySelectorAll(selector)];
 const motionPreference = window.matchMedia('(prefers-reduced-motion: reduce)');
 const state = {
-  materials: [], filters: emptyFilters(), view: 'library', limit: 12,
+  materials: [], filters: emptyFilters(), view: 'library', limit: 0, expanded: false,
   editing: null, detailId: null, deleting: null, round: null, mode: 'guess',
   importMode: 'csv', csvText: '', importItems: null, previewRevision: 0,
   selecting: false, selectedIds: new Set(),
@@ -116,13 +116,29 @@ function selectMaterial(id, selected) {
   if (selected) state.selectedIds.add(id); else state.selectedIds.delete(id);
   syncSelectionControls();
 }
-function visiblePageSize() {
+function libraryGroups(items = filtered()) {
+  if (state.filters.type !== 'all') return [{ type: state.filters.type, items, showTitle: false }];
+  return Object.keys(TYPES).map(type => ({ type, items: items.filter(item => item.type === type), showTitle: true }))
+    .filter(group => group.items.length);
+}
+function visiblePageSize(groups = libraryGroups()) {
   const grid = $('#material-grid'), style = getComputedStyle(grid);
-  const columns = style.gridTemplateColumns.split(/\s+/).length;
-  const rowHeight = parseFloat(style.gridAutoRows), gap = parseFloat(style.rowGap) || 0;
-  const height = grid.clientHeight - (parseFloat(style.paddingTop) || 0) - (parseFloat(style.paddingBottom) || 0);
-  if (!rowHeight || height <= 0) return 12;
-  return Math.max(12, columns * Math.floor((height + gap) / (rowHeight + gap)));
+  const columns = parseInt(style.getPropertyValue('--material-columns')) || 2;
+  const rowHeight = parseFloat(style.getPropertyValue('--material-row-height'));
+  const headingHeight = parseFloat(style.getPropertyValue('--material-heading-height'));
+  const gap = parseFloat(style.getPropertyValue('--material-group-gap'));
+  let height = grid.clientHeight - (parseFloat(style.paddingTop) || 0) - (parseFloat(style.paddingBottom) || 0), count = 0;
+  if (!rowHeight || height <= 0) return 0;
+  for (const group of groups) {
+    const spacing = (count ? gap : 0) + (group.showTitle ? headingHeight : 0);
+    const rows = Math.max(0, Math.floor((height - spacing) / rowHeight));
+    const shown = Math.min(group.items.length, columns * rows);
+    if (!shown) break;
+    count += shown;
+    height -= spacing + Math.ceil(shown / columns) * rowHeight;
+    if (shown < group.items.length) break;
+  }
+  return count;
 }
 function renderCounts() {
   $('#count-evergreen').textContent = state.materials.filter(item => GROUPS.evergreen.includes(item.type)).length;
@@ -148,7 +164,7 @@ function syncFilterControls() {
   }
 }
 function changedFilters({ animate = false } = {}) {
-  state.limit = 12; state.round = null; syncFilterControls(); renderLibrary({ animate });
+  state.expanded = false; state.round = null; syncFilterControls(); renderLibrary({ animate });
   $('#material-grid').scrollTop = 0;
 }
 function resetFilters() { state.selectedIds.clear(); state.filters = emptyFilters(); changedFilters({ animate: true }); }
@@ -157,6 +173,8 @@ function chooseCategory(group, type = 'all') {
   state.filters = { ...emptyFilters(), group, type }; changedFilters({ animate: true });
 }
 function renderEmpty(title, message, label, action) {
+  state.expanded = false; state.limit = 0; $('#material-grid').classList.remove('expanded');
+  $('#load-more').setAttribute('aria-expanded', 'false');
   const node = element('div', 'empty-state');
   node.append(element('div', 'empty-star', '✳'), element('h3', '', title));
   if (message) node.append(element('p', '', message));
@@ -177,38 +195,54 @@ function renderLibrary({ animate = false, fromIndex = 0 } = {}) {
     renderEmpty(noClassic ? '好玩的，留在这里' : state.materials.length ? '换个条件找找？' : '第一条好题，等你来加',
       noClassic ? '点亮素材旁的星星，就能收进经典。' : '',
       state.materials.length ? '查看全部素材' : '添加素材', state.materials.length ? resetFilters : () => openEditor());
-    if (animate) animateIn($('#material-grid').children, { duration: 180 });
+    if (animate) animateIn($('#material-grid').firstElementChild.children, { duration: 180 });
     return;
   }
-  // 先为“加载更多”留出空间，再用完整行填充当前屏幕。
-  $('#load-more').hidden = items.length <= state.limit;
-  state.limit = Math.max(state.limit, visiblePageSize());
+  const groups = libraryGroups(items), toggle = $('#load-more'), grid = $('#material-grid');
+  // 只显示完整的分组标题和词条行；主动展开后才允许滚动。
+  toggle.hidden = true;
+  let capacity = visiblePageSize(groups);
+  const needsToggle = items.length > capacity;
+  toggle.hidden = !needsToggle;
+  if (needsToggle) capacity = visiblePageSize(groups);
+  else state.expanded = false;
+  state.limit = state.expanded ? items.length : capacity;
+  grid.classList.toggle('expanded', state.expanded);
+  toggle.setAttribute('aria-expanded', state.expanded);
   const fragment = document.createDocumentFragment();
-  for (const item of items.slice(0, state.limit)) {
-    const card = element('article', 'material-card'); card.dataset.id = item.id;
-    const top = element('div', 'card-top');
-    const type = element('span', `type-label type-${item.type}`, TYPES[item.type]);
-    if (state.selecting) {
-      const choice = element('label', 'card-choice'), checkbox = element('input', 'material-checkbox');
-      checkbox.type = 'checkbox'; checkbox.checked = state.selectedIds.has(item.id);
-      checkbox.setAttribute('aria-label', `选择词条：${item.text}`);
-      checkbox.addEventListener('change', () => selectMaterial(item.id, checkbox.checked));
-      choice.append(checkbox, type); top.append(choice);
-    } else top.append(type);
-    const star = button('', `icon-button favorite-button${item.isClassic ? ' selected' : ''}`, () => toggleClassic(item, star), 'star');
-    star.setAttribute('aria-label', `${item.isClassic ? '移出经典永流传' : '收进经典永流传'}：${item.text.slice(0, 30)}`);
-    star.setAttribute('aria-pressed', item.isClassic); star.title = item.isClassic ? '移出经典永流传' : '收进经典永流传'; top.append(star);
-    const open = button('', 'card-open', () => state.selecting ? selectMaterial(item.id, !state.selectedIds.has(item.id)) : openDetail(item.id));
-    open.setAttribute('aria-label', `${state.selecting ? '选择词条' : '查看素材'}：${item.text}`);
-    if (state.selecting) open.setAttribute('aria-pressed', state.selectedIds.has(item.id));
-    open.append(element('h3', `card-text${item.text.length <= 5 ? ' short' : ''}`, item.text));
-    card.classList.toggle('selected-material', state.selectedIds.has(item.id));
-    card.append(top, open); fragment.append(card);
+  let remaining = state.limit;
+  for (const group of groups) {
+    if (!remaining) break;
+    const shown = group.items.slice(0, remaining);
+    remaining -= shown.length;
+    const section = element('section', 'material-group');
+    section.setAttribute('aria-label', TYPES[group.type]);
+    if (group.showTitle) section.append(element('h3', 'material-group-heading', TYPES[group.type]));
+    const cards = element('div', 'material-group-grid');
+    for (const item of shown) {
+      const card = element('article', 'material-card'); card.dataset.id = item.id;
+      if (state.selecting) {
+        const choice = element('label', 'card-choice'), checkbox = element('input', 'material-checkbox');
+        checkbox.type = 'checkbox'; checkbox.checked = state.selectedIds.has(item.id);
+        checkbox.setAttribute('aria-label', `选择词条：${item.text}`);
+        checkbox.addEventListener('change', () => selectMaterial(item.id, checkbox.checked));
+        choice.append(checkbox); card.append(choice);
+      }
+      const star = button('', `icon-button favorite-button${item.isClassic ? ' selected' : ''}`, () => toggleClassic(item, star), 'star');
+      star.setAttribute('aria-label', `${item.isClassic ? '移出经典永流传' : '收进经典永流传'}：${item.text.slice(0, 30)}`);
+      star.setAttribute('aria-pressed', item.isClassic); star.title = item.isClassic ? '移出经典永流传' : '收进经典永流传';
+      const open = button('', 'card-open', () => state.selecting ? selectMaterial(item.id, !state.selectedIds.has(item.id)) : openDetail(item.id));
+      open.setAttribute('aria-label', `${state.selecting ? '选择词条' : '查看素材'}：${item.text}`);
+      if (state.selecting) open.setAttribute('aria-pressed', state.selectedIds.has(item.id));
+      open.append(element('h4', `card-text${item.text.length <= 5 ? ' short' : ''}`, item.text));
+      card.classList.toggle('selected-material', state.selectedIds.has(item.id));
+      card.append(open, star); cards.append(card);
+    }
+    section.append(cards); fragment.append(section);
   }
-  $('#material-grid').replaceChildren(fragment);
-  if (animate) animateIn([...$('#material-grid').children].slice(fromIndex), { duration: 220, stagger: 18 });
-  const remaining = items.length - state.limit;
-  $('#load-more').hidden = remaining <= 0; $('#load-more').textContent = `加载更多 · 还有 ${remaining} 条`;
+  grid.replaceChildren(fragment);
+  if (animate) animateIn($$('.material-card').slice(fromIndex), { duration: 220, stagger: 18 });
+  toggle.textContent = state.expanded ? '收起词条' : `展开更多 · 还有 ${items.length - state.limit} 条`;
 }
 function openEditor(item = null) {
   state.editing = item ? { ...item, tags: [...item.tags] } : null;
@@ -232,7 +266,7 @@ async function saveEditor(event) {
     const editing = state.editing;
     await api(editing ? `/api/materials/${editing.id}` : '/api/materials', { method: editing ? 'PATCH' : 'POST', body: JSON.stringify(payload) });
     $('#editor-dialog').close();
-    if (!editing) { state.selectedIds.clear(); state.filters = emptyFilters(); state.limit = 12; }
+    if (!editing) { state.selectedIds.clear(); state.filters = emptyFilters(); state.expanded = false; }
     await refresh({ force: true }); toast(editing ? '素材已更新' : '好题已收进素材库');
   } catch (error) { inlineError('#editor-error', error.message); }
   finally { save.disabled = false; }
@@ -374,7 +408,7 @@ async function commitImport() {
   controls.forEach(node => { node.disabled = true; }); inlineError('#import-error');
   try {
     const report = await api('/api/materials/import', { method: 'POST', body: JSON.stringify({ items: state.importItems }) });
-    succeeded = true; $('#import-dialog').close(); state.selectedIds.clear(); state.filters = emptyFilters(); state.limit = 12;
+    succeeded = true; $('#import-dialog').close(); state.selectedIds.clear(); state.filters = emptyFilters(); state.expanded = false;
     await refresh({ force: true });
     toast(`已导入 ${report.added} 条${report.duplicates ? `，跳过重复 ${report.duplicates} 条` : ''}`);
   } catch (error) { inlineError('#import-error', error.message); if (error.details) renderPreview(error.details); }
@@ -420,7 +454,7 @@ function showView(view) {
   $('#nav-library').classList.toggle('active', view === 'library'); $('#nav-game').classList.toggle('active', view === 'game');
   $('#header-add').hidden = view === 'game';
   if (view === 'game') renderGame();
-  else refresh({ silent: true });
+  else { if (loaded) renderLibrary(); refresh({ silent: true }); }
   window.scrollTo(0, 0);
 }
 function gameHint() { return state.mode === 'relay' ? '只让当前比划者看题，再把动作传下去。' : '让猜题的人背对屏幕，再点击显示。'; }
@@ -523,7 +557,9 @@ $('#select-results').addEventListener('click', () => {
 $('#clear-selection').addEventListener('click', () => { state.selectedIds.clear(); syncSelectionControls(); });
 $('#delete-selected').addEventListener('click', askDeleteSelection);
 $('#load-more').addEventListener('click', () => {
-  const fromIndex = state.limit; state.limit += 12; renderLibrary({ animate: true, fromIndex });
+  const fromIndex = state.expanded ? 0 : state.limit;
+  state.expanded = !state.expanded;
+  renderLibrary({ animate: true, fromIndex }); $('#material-grid').scrollTop = 0;
 });
 $('#import-open').addEventListener('click', openImport); $('#export-open').addEventListener('click', openExport);
 for (const node of $$('[data-import-tab]')) node.addEventListener('click', () => switchImport(node.dataset.importTab));
@@ -559,10 +595,8 @@ document.addEventListener('keydown', event => {
 });
 window.addEventListener('focus', () => refresh({ silent: true }));
 const gridResizeObserver = new ResizeObserver(() => {
-  if (!loaded || state.view !== 'library' || visiblePageSize() <= state.limit) return;
-  const fromIndex = state.limit;
-  state.limit = visiblePageSize();
-  renderLibrary({ animate: true, fromIndex });
+  if (!loaded || state.view !== 'library' || state.expanded || visiblePageSize() === state.limit) return;
+  renderLibrary();
 });
 gridResizeObserver.observe($('#material-grid'));
 document.addEventListener('visibilitychange', () => { if (!document.hidden) refresh({ silent: true }); });
