@@ -2,6 +2,7 @@ import { TYPES, GROUPS, normalizeTags, filterMaterials, parseMaterialCSV, materi
 
 const $ = selector => document.querySelector(selector);
 const $$ = selector => [...document.querySelectorAll(selector)];
+const DISPLAY_TYPE_ORDER = ['meme', 'lyrics', 'general', 'sentence', 'poetry'];
 const motionPreference = window.matchMedia('(prefers-reduced-motion: reduce)');
 const state = {
   materials: [], filters: emptyFilters(), view: 'library', limit: 0, expanded: false,
@@ -118,7 +119,7 @@ function selectMaterial(id, selected) {
 }
 function libraryGroups(items = filtered()) {
   if (state.filters.type !== 'all') return [{ type: state.filters.type, items, showTitle: false }];
-  return Object.keys(TYPES).map(type => ({ type, items: items.filter(item => item.type === type), showTitle: true }))
+  return DISPLAY_TYPE_ORDER.map(type => ({ type, items: items.filter(item => item.type === type), showTitle: true }))
     .filter(group => group.items.length);
 }
 function visiblePageSize(groups = libraryGroups()) {
