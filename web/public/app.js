@@ -632,6 +632,7 @@ function renderGame() {
   $('#restart-round').hidden = !state.round || state.round.finished; $('#fullscreen-button').title = document.body.classList.contains('focus-mode') ? '退出全屏' : '全屏展示';
   for (const node of $$('.mode-button')) { const active = node.dataset.mode === state.mode; node.classList.toggle('active', active); node.setAttribute('aria-pressed', active); }
   const round = state.round, pool = filtered();
+  $('.keyboard-tip').textContent = round ? '空格 显示／隐藏 · → 下一题' : '空格 开始游戏';
   if (!round) {
     $('#game-counter').textContent = `${pool.length} 道待抽`;
     content.append(element('div', 'stage-symbol', '✳'), element('h2', '', pool.length ? '好题已就位' : '还没有选中题目'));
@@ -738,7 +739,13 @@ document.addEventListener('keydown', event => {
   if (state.view !== 'game' || $('dialog[open]') || event.repeat || event.defaultPrevented || event.target.closest('.web-picker')) return;
   if (event.key === 'Escape') { exitFocus(); return; }
   if (event.target.closest('input,textarea,select,[contenteditable="true"]')) return;
-  if (event.target.closest('button,a') && !event.target.closest('#game-stage')) return;
+  const spaceFromGameNav = event.code === 'Space' && event.target.closest('#nav-game');
+  if (event.target.closest('button,a') && !event.target.closest('#game-stage') && !spaceFromGameNav) return;
+  if (event.code === 'Space' && !state.round) {
+    event.preventDefault();
+    if (filtered().length) startRound();
+    return;
+  }
   if (!state.round || state.round.finished) return;
   if (event.code === 'Space') { event.preventDefault(); state.round.toggle(); renderGame(); }
   if (event.key === 'ArrowRight') { event.preventDefault(); state.round.next(); renderGame(); }
