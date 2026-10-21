@@ -68,12 +68,10 @@
       <section class="library-section" aria-label="素材列表">
         <div class="library-heading">
           <div class="heading-title"><h2 id="library-title">所有素材</h2><span id="result-count" class="result-count" aria-live="polite">…</span></div>
+          <label class="search-box"><svg class="icon"><use href="#i-search"/></svg><span class="sr-only">搜索素材</span><input id="search" type="search" placeholder="搜个词，找点灵感" autocomplete="off"></label>
           <div class="library-actions"><button class="button button-plain" id="selection-toggle" type="button" aria-pressed="false">多选</button><button class="button button-plain" id="export-open" type="button"><svg class="icon"><use href="#i-download"/></svg>导出</button><button class="button button-plain" id="import-open" type="button"><svg class="icon"><use href="#i-upload"/></svg>批量导入</button></div>
         </div>
-        <div class="filter-row">
-          <label class="search-box"><svg class="icon"><use href="#i-search"/></svg><span class="sr-only">搜索素材</span><input id="search" type="search" placeholder="搜个词，找点灵感" autocomplete="off"></label>
-          <div id="selection-tools" class="selection-tools" hidden><span id="selection-count" aria-live="polite">已选 0 条</span><button class="text-button" id="select-results" type="button">全选当前结果</button><button class="text-button" id="clear-selection" type="button">清空选择</button><button class="text-button selection-delete" id="delete-selected" type="button" disabled>删除所选</button></div>
-        </div>
+        <div id="selection-tools" class="selection-tools" hidden><span id="selection-count" aria-live="polite">已选 0 条</span><button class="text-button" id="select-results" type="button">全选当前结果</button><button class="text-button" id="clear-selection" type="button">清空选择</button><button class="text-button selection-delete" id="delete-selected" type="button" disabled>删除所选</button></div>
         <div id="material-grid" class="material-grid" role="region" aria-label="素材浏览区" tabindex="0" aria-live="polite"><p class="loading">正在打开题库…</p></div>
         <div class="load-more-wrap"><button class="button button-outline" id="load-more" type="button" aria-controls="material-grid" aria-expanded="false" hidden>展开更多</button></div>
       </section>

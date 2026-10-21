@@ -376,7 +376,7 @@ function renderLibrary({ animate = false, fromIndex = 0 } = {}) {
       const open = button('', 'card-open', () => state.selecting ? selectMaterial(item.id, !state.selectedIds.has(item.id)) : openDetail(item.id));
       open.setAttribute('aria-label', `${state.selecting ? '选择词条' : '查看素材'}：${item.text}`);
       if (state.selecting) open.setAttribute('aria-pressed', state.selectedIds.has(item.id));
-      open.append(element('h4', `card-text${item.text.length <= 5 ? ' short' : ''}`, item.text));
+      open.append(element('h4', 'card-text', item.text));
       card.classList.toggle('selected-material', state.selectedIds.has(item.id));
       card.append(open, star); cards.append(card);
     }
