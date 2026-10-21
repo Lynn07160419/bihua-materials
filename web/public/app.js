@@ -11,6 +11,7 @@ const state = {
   selecting: false, selectedIds: new Set(),
 };
 let requestSequence = 0, loaded = false, fingerprint = '', toastTimer, nativeFullscreen = false;
+let gameLibraryItems = [], activeGameLibraryIndex = -1;
 
 function emptyFilters() { return { q: '', group: 'all', type: 'all' }; }
 function element(tag, className, text) {
@@ -450,6 +451,7 @@ function downloadExport(format) {
 }
 
 function showView(view) {
+  closeGameLibrary();
   if (view === 'library') exitFocus();
   state.view = view; $('#library-view').hidden = view !== 'library'; $('#game-view').hidden = view !== 'game';
   $('#nav-library').classList.toggle('active', view === 'library'); $('#nav-game').classList.toggle('active', view === 'game');
@@ -460,12 +462,15 @@ function showView(view) {
 }
 function gameHint() { return state.mode === 'relay' ? '只让当前比划者看题，再把动作传下去。' : '让猜题的人背对屏幕，再点击显示。'; }
 function renderGameLibraries() {
-  const select = $('#game-library'); select.replaceChildren();
+  const list = $('#game-library-list'), wasOpen = !list.hidden;
+  const previousActive = gameLibraryItems[activeGameLibraryIndex]?.value;
+  const selectedValue = state.filters.q.trim() ? 'current' : `${state.filters.group}:${state.filters.type}`;
+  gameLibraryItems = [];
   const add = (group, type, label) => {
     const count = filterMaterials(state.materials, { group, type }).length;
-    const option = element('option', type === 'all' ? 'game-library-group' : '', `${type === 'all' ? '' : '　'}${label} · ${count}`);
-    option.value = `${group}:${type}`; select.append(option);
+    gameLibraryItems.push({ value: `${group}:${type}`, label, count, isGroup: type === 'all' });
   };
+  if (selectedValue === 'current') gameLibraryItems.push({ value: 'current', label: '当前搜索', count: filtered().length, isGroup: true });
   add('all', 'all', '全部素材');
   for (const [group, label] of [['evergreen', '长盛不衰'], ['trending', '引领潮流'], ['classic', '经典永流传']]) {
     add(group, 'all', label);
@@ -473,29 +478,83 @@ function renderGameLibraries() {
       state.materials.some(item => item.isClassic && item.type === type) || (state.filters.group === group && state.filters.type === type));
     for (const type of types) add(group, type, TYPES[type]);
   }
-  if (state.filters.q.trim()) {
-    const current = element('option', '', `当前搜索 · ${filtered().length}`); current.value = 'current'; select.prepend(current);
-    select.value = 'current';
-  } else select.value = `${state.filters.group}:${state.filters.type}`;
+  const selected = gameLibraryItems.find(item => item.value === selectedValue) || gameLibraryItems[0];
+  $('#game-library-label').textContent = `${selected.label} · ${selected.count}`;
+  list.replaceChildren();
+  gameLibraryItems.forEach((item, index) => {
+    const option = element('div', `game-library-option${item.isGroup ? ' game-library-group' : ' game-library-child'}`);
+    option.id = `game-library-option-${index}`;
+    option.dataset.value = item.value;
+    option.setAttribute('role', 'option'); option.setAttribute('aria-selected', item.value === selected.value);
+    option.setAttribute('aria-label', `${item.label} · ${item.count}`);
+    option.append(element('span', 'game-library-option-label', item.label), element('span', 'game-library-count', String(item.count)), icon('check'));
+    option.addEventListener('pointerdown', event => { if (event.pointerType === 'mouse') event.preventDefault(); });
+    option.addEventListener('pointerenter', event => { if (event.pointerType === 'mouse') setActiveGameLibrary(index); });
+    option.addEventListener('click', () => selectGameLibrary(item.value));
+    list.append(option);
+  });
+  activeGameLibraryIndex = gameLibraryItems.findIndex(item => item.value === (wasOpen ? previousActive : selected.value));
+  if (activeGameLibraryIndex < 0) activeGameLibraryIndex = gameLibraryItems.indexOf(selected);
+  if (wasOpen) { positionGameLibrary(); setActiveGameLibrary(activeGameLibraryIndex); }
+}
+function setActiveGameLibrary(index) {
+  activeGameLibraryIndex = Math.max(0, Math.min(gameLibraryItems.length - 1, index));
+  const options = [...$('#game-library-list').children];
+  options.forEach((option, optionIndex) => option.classList.toggle('active', optionIndex === activeGameLibraryIndex));
+  if (!$('#game-library-list').hidden && options[activeGameLibraryIndex]) {
+    $('#game-library').setAttribute('aria-activedescendant', options[activeGameLibraryIndex].id);
+    options[activeGameLibraryIndex].scrollIntoView({ block: 'nearest' });
+  }
+}
+function positionGameLibrary() {
+  const list = $('#game-library-list');
+  if (list.hidden) return;
+  const rect = $('#game-library').getBoundingClientRect(), margin = 12, gap = 6;
+  const viewportHeight = window.visualViewport?.height || window.innerHeight;
+  const width = Math.min(Math.max(rect.width, 260), window.innerWidth - margin * 2);
+  const below = viewportHeight - rect.bottom - gap - margin, above = rect.top - gap - margin;
+  const placeAbove = below < Math.min(240, above);
+  list.style.width = `${width}px`;
+  list.style.left = `${Math.max(margin, Math.min(rect.left, window.innerWidth - width - margin))}px`;
+  list.style.maxHeight = `${Math.max(0, Math.min(400, placeAbove ? above : below))}px`;
+  list.style.top = `${placeAbove ? rect.top - gap - list.getBoundingClientRect().height : rect.bottom + gap}px`;
+}
+function openGameLibrary() {
+  const selectedIndex = [...$('#game-library-list').children].findIndex(option => option.getAttribute('aria-selected') === 'true');
+  $('#game-library-list').hidden = false;
+  $('#game-library').setAttribute('aria-expanded', 'true');
+  $('#game-library').focus({ preventScroll: true });
+  positionGameLibrary(); setActiveGameLibrary(selectedIndex);
+}
+function closeGameLibrary({ restoreFocus = false } = {}) {
+  $('#game-library-list').hidden = true;
+  $('#game-library').setAttribute('aria-expanded', 'false');
+  $('#game-library').removeAttribute('aria-activedescendant');
+  if (restoreFocus) $('#game-library').focus({ preventScroll: true });
+}
+function selectGameLibrary(value) {
+  closeGameLibrary({ restoreFocus: true });
+  if (value === 'current') return;
+  const [group, type] = value.split(':'); chooseCategory(group, type); renderGame();
 }
 function renderGame() {
   renderGameLibraries();
   const content = $('#stage-content'), controls = $('#stage-controls'); content.replaceChildren(); controls.replaceChildren();
   animateIn(content, { duration: 180 });
-  $('#restart-round').hidden = !state.round; $('#fullscreen-button').title = document.body.classList.contains('focus-mode') ? '退出全屏' : '全屏展示';
+  $('#restart-round').hidden = !state.round || state.round.finished; $('#fullscreen-button').title = document.body.classList.contains('focus-mode') ? '退出全屏' : '全屏展示';
   for (const node of $$('.mode-button')) { const active = node.dataset.mode === state.mode; node.classList.toggle('active', active); node.setAttribute('aria-pressed', active); }
   const round = state.round, pool = filtered();
   if (!round) {
     $('#game-counter').textContent = `${pool.length} 道待抽`;
     content.append(element('div', 'stage-symbol', '✳'), element('h2', '', pool.length ? '好题已就位' : '还没有选中题目'));
-    if (pool.length) content.append(element('p', '', gameHint()));
-    controls.append(button(pool.length ? '开始抽题' : '返回选题', 'button button-dark', pool.length ? startRound : () => showView('library'), pool.length ? 'arrow' : 'library'));
+    content.append(element('p', '', pool.length ? gameHint() : '换个题库试试。'));
+    if (pool.length) controls.append(button('开始抽题', 'button button-dark', startRound, 'arrow'));
     return;
   }
   if (round.finished) {
     $('#game-counter').textContent = '本轮结束';
     content.append(element('div', 'stage-symbol', '✦'), element('h2', '', `${round.deck.length} 道题，抽完啦！`));
-    controls.append(button('再来一轮', 'button button-dark', startRound, 'refresh'), button('重新选题', 'button button-stage-secondary', () => { state.round = null; showView('library'); }));
+    controls.append(button('再来一轮', 'button button-dark', startRound, 'refresh'));
     return;
   }
   $('#game-counter').textContent = `${round.index + 1} / ${round.deck.length} · ${TYPES[round.current.type]}`;
@@ -512,6 +571,7 @@ function renderGame() {
 }
 function startRound() { state.round = new DrawRound(filtered()); renderGame(); }
 async function toggleFocus() {
+  closeGameLibrary();
   if (document.body.classList.contains('focus-mode')) return exitFocus();
   document.body.classList.add('focus-mode'); $('#fullscreen-button').setAttribute('aria-label', '退出全屏');
   $('#fullscreen-button').title = '退出全屏';
@@ -576,17 +636,30 @@ for (const node of $$('#paste-panel input, #paste-panel select, #paste-panel tex
 $('#preview-import').addEventListener('click', previewImport); $('#commit-import').addEventListener('click', commitImport);
 for (const node of $$('[data-export]')) node.addEventListener('click', () => downloadExport(node.dataset.export));
 $('#nav-library').addEventListener('click', () => showView('library')); $('#nav-game').addEventListener('click', () => showView('game'));
-$('#game-back').addEventListener('click', () => showView('library'));
-$('#game-library').addEventListener('change', event => {
-  if (event.target.value === 'current') return;
-  const [group, type] = event.target.value.split(':'); chooseCategory(group, type); renderGame();
+$('#game-library').addEventListener('click', () => {
+  if ($('#game-library-list').hidden) openGameLibrary(); else closeGameLibrary();
 });
+$('#game-library').addEventListener('keydown', event => {
+  const open = !$('#game-library-list').hidden;
+  if (event.key === 'Tab') { closeGameLibrary(); return; }
+  if (!['ArrowDown', 'ArrowUp', 'Home', 'End', 'Enter', ' ', 'Escape'].includes(event.key)) return;
+  event.preventDefault(); event.stopPropagation();
+  if (event.key === 'Escape') { closeGameLibrary({ restoreFocus: true }); return; }
+  if (!open) { openGameLibrary(); if (event.key === 'Home') setActiveGameLibrary(0); if (event.key === 'End') setActiveGameLibrary(gameLibraryItems.length - 1); return; }
+  if (event.key === 'Enter' || event.key === ' ') { selectGameLibrary(gameLibraryItems[activeGameLibraryIndex].value); return; }
+  const index = event.key === 'Home' ? 0 : event.key === 'End' ? gameLibraryItems.length - 1 : activeGameLibraryIndex + (event.key === 'ArrowDown' ? 1 : -1);
+  setActiveGameLibrary(index);
+});
+document.addEventListener('pointerdown', event => { if (!$('#game-library-picker').contains(event.target)) closeGameLibrary(); });
+$('#game-library-picker').addEventListener('focusout', event => { if (event.relatedTarget && !event.currentTarget.contains(event.relatedTarget)) closeGameLibrary(); });
+window.addEventListener('resize', positionGameLibrary);
+window.visualViewport?.addEventListener('resize', positionGameLibrary);
 $('#restart-round').addEventListener('click', () => { state.round = null; renderGame(); });
 $('#fullscreen-button').addEventListener('click', toggleFocus);
 for (const node of $$('.mode-button')) node.addEventListener('click', () => { state.mode = node.dataset.mode; renderGame(); });
 document.addEventListener('fullscreenchange', () => { if (!document.fullscreenElement && nativeFullscreen) exitFocus(); });
 document.addEventListener('keydown', event => {
-  if (state.view !== 'game' || $('dialog[open]') || event.repeat) return;
+  if (state.view !== 'game' || $('dialog[open]') || event.repeat || event.defaultPrevented || event.target.closest('.game-library-picker')) return;
   if (event.key === 'Escape') { exitFocus(); return; }
   if (event.target.closest('input,textarea,select,[contenteditable="true"]')) return;
   if (event.target.closest('button,a') && !event.target.closest('#game-stage')) return;

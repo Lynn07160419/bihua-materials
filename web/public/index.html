@@ -15,6 +15,7 @@
     <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
     <symbol id="i-search" viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 4.5 4.5"/></symbol>
     <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M4 12h16m-6-6 6 6-6 6"/></symbol>
+    <symbol id="i-chevron" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></symbol>
     <symbol id="i-close" viewBox="0 0 24 24"><path d="m6 6 12 12M6 18 18 6"/></symbol>
     <symbol id="i-star" viewBox="0 0 24 24"><path d="m12 3 2.8 5.8 6.4.9-4.6 4.5 1.1 6.3-5.7-3-5.7 3 1.1-6.3-4.6-4.5 6.4-.9Z"/></symbol>
     <symbol id="i-download" viewBox="0 0 24 24"><path d="M12 3v12m-5-5 5 5 5-5M4 16v4h16v-4"/></symbol>
@@ -80,7 +81,17 @@
     </section>
 
     <section id="game-view" class="wrap game-view" hidden>
-      <div class="game-heading"><div><h1>轮到你比划！</h1><button class="text-button" id="game-back" type="button">← 返回选题</button></div><div class="game-options"><label class="game-library-picker"><span class="sr-only">选择题库</span><select id="game-library"></select></label><div class="mode-switch" aria-label="玩法提示"><button class="mode-button active" data-mode="guess" type="button">你比划我猜</button><button class="mode-button" data-mode="relay" type="button">传词游戏</button></div></div></div>
+      <div class="game-heading">
+        <h1>轮到你比划！</h1>
+        <div class="game-options">
+          <div class="game-library-picker" id="game-library-picker">
+            <span class="sr-only" id="game-library-name">选择题库</span>
+            <button class="game-library-trigger" id="game-library" type="button" role="combobox" aria-labelledby="game-library-name game-library-label" aria-haspopup="listbox" aria-expanded="false" aria-controls="game-library-list"><span id="game-library-label">全部素材</span><svg class="icon" aria-hidden="true"><use href="#i-chevron"/></svg></button>
+            <div class="game-library-list" id="game-library-list" role="listbox" aria-label="题库列表" hidden></div>
+          </div>
+          <div class="mode-switch" aria-label="玩法提示"><button class="mode-button active" data-mode="guess" type="button">你比划我猜</button><button class="mode-button" data-mode="relay" type="button">传词游戏</button></div>
+        </div>
+      </div>
       <section class="game-stage" id="game-stage" aria-label="出题区">
         <div class="stage-top"><span class="stage-label" id="game-counter">准备就绪</span><button class="icon-button" id="fullscreen-button" type="button" aria-label="全屏展示" title="全屏展示"><svg class="icon"><use href="#i-full"/></svg></button></div>
         <div class="stage-content" id="stage-content" aria-live="polite"></div>
