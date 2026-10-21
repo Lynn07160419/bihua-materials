@@ -11,7 +11,7 @@ const state = {
   selecting: false, selectedIds: new Set(),
 };
 let requestSequence = 0, loaded = false, fingerprint = '', toastTimer, nativeFullscreen = false;
-let gameLibraryItems = [], activeGameLibraryIndex = -1;
+const pickers = new Set();
 
 function emptyFilters() { return { q: '', group: 'all', type: 'all' }; }
 function element(tag, className, text) {
@@ -32,6 +32,146 @@ function button(text, className, action, iconName) {
   if (text) node.append(document.createTextNode(text));
   node.addEventListener('click', action); return node;
 }
+function createPicker({ root, trigger, label, list, onSelect, minWidth = 200 }) {
+  let items = [], value, activeIndex = -1, options = [];
+  const dialog = root.closest('dialog');
+  root.classList.add('web-picker'); trigger.classList.add('picker-trigger'); label.classList.add('picker-value');
+  list.classList.add('picker-list');
+  // Popovers stay above the modal and are not clipped by its scrolling content.
+  const usesPopover = typeof list.showPopover === 'function';
+  if (usesPopover) list.setAttribute('popover', 'manual');
+  const picker = {
+    get isOpen() { return !list.hidden; },
+    setOptions(nextItems, nextValue) {
+      const previousActive = items[activeIndex]?.value;
+      items = nextItems; value = nextValue;
+      const selected = items.find(item => item.value === value) || items[0];
+      if (!selected) { picker.close(); label.textContent = ''; list.replaceChildren(); return; }
+      value = selected.value;
+      label.textContent = selected.count === undefined ? selected.label : `${selected.label} · ${selected.count}`;
+      const fragment = document.createDocumentFragment();
+      let section, parent = fragment;
+      options = items.map((item, index) => {
+        if (item.section !== section) {
+          section = item.section;
+          parent = fragment;
+          if (section) {
+            parent = element('div'); parent.setAttribute('role', 'group'); parent.setAttribute('aria-label', section);
+            const heading = element('div', 'picker-section', section); heading.setAttribute('aria-hidden', 'true');
+            parent.append(heading); fragment.append(parent);
+          }
+        }
+        const option = element('div', `picker-option${item.isGroup ? ' picker-group' : item.isChild ? ' picker-child' : ''}`);
+        option.id = `${list.id}-option-${index}`; option.dataset.value = item.value;
+        option.setAttribute('role', 'option'); option.setAttribute('aria-selected', item.value === value);
+        option.setAttribute('aria-label', item.count === undefined ? item.label : `${item.label} · ${item.count}`);
+        option.append(element('span', 'picker-option-label', item.label));
+        if (item.count !== undefined) option.append(element('span', 'picker-count', String(item.count)));
+        option.append(icon('check'));
+        option.addEventListener('pointerdown', event => { if (event.pointerType === 'mouse') event.preventDefault(); });
+        option.addEventListener('pointerenter', event => { if (event.pointerType === 'mouse') setActive(index, false); });
+        option.addEventListener('click', () => commit(item));
+        parent.append(option); return option;
+      });
+      list.replaceChildren(fragment);
+      activeIndex = items.findIndex(item => item.value === (picker.isOpen ? previousActive : value));
+      if (activeIndex < 0) activeIndex = items.indexOf(selected);
+      if (picker.isOpen) { picker.position(); setActive(activeIndex); }
+    },
+    open() {
+      if (trigger.disabled || !items.length) return;
+      for (const other of pickers) if (other !== picker) other.close();
+      list.hidden = false;
+      if (usesPopover) list.showPopover();
+      trigger.setAttribute('aria-expanded', 'true'); trigger.focus({ preventScroll: true });
+      picker.position(); setActive(items.findIndex(item => item.value === value));
+    },
+    close({ restoreFocus = false } = {}) {
+      if (usesPopover && list.matches(':popover-open')) list.hidePopover();
+      list.hidden = true; trigger.setAttribute('aria-expanded', 'false'); trigger.removeAttribute('aria-activedescendant');
+      if (restoreFocus) trigger.focus({ preventScroll: true });
+    },
+    position() {
+      if (!picker.isOpen) return;
+      const rect = trigger.getBoundingClientRect(), margin = 12, gap = 6, viewport = window.visualViewport;
+      const left = viewport?.offsetLeft || 0, top = viewport?.offsetTop || 0;
+      const right = left + (viewport?.width || window.innerWidth), bottom = top + (viewport?.height || window.innerHeight);
+      if (rect.bottom < top + margin || rect.top > bottom - margin) { picker.close(); return; }
+      const width = Math.min(Math.max(rect.width, minWidth), right - left - margin * 2);
+      const below = bottom - rect.bottom - gap - margin, above = rect.top - top - gap - margin;
+      const placeAbove = below < Math.min(240, above);
+      list.style.width = `${width}px`;
+      list.style.left = `${Math.max(left + margin, Math.min(rect.left, right - width - margin))}px`;
+      list.style.maxHeight = `${Math.max(0, Math.min(400, placeAbove ? above : below))}px`;
+      list.style.top = `${placeAbove ? rect.top - gap - list.getBoundingClientRect().height : rect.bottom + gap}px`;
+    },
+  };
+  function setActive(index, scroll = true) {
+    activeIndex = Math.max(0, Math.min(items.length - 1, index));
+    options.forEach((option, i) => option.classList.toggle('active', i === activeIndex));
+    if (!picker.isOpen || !options[activeIndex]) return;
+    const option = options[activeIndex]; trigger.setAttribute('aria-activedescendant', option.id);
+    if (scroll) {
+      const optionRect = option.getBoundingClientRect(), listRect = list.getBoundingClientRect();
+      if (optionRect.top < listRect.top + 6) list.scrollTop -= listRect.top + 6 - optionRect.top;
+      else if (optionRect.bottom > listRect.bottom - 6) list.scrollTop += optionRect.bottom - listRect.bottom + 6;
+    }
+  }
+  function commit(item) {
+    if (trigger.disabled) return;
+    picker.close({ restoreFocus: true });
+    if (item.value !== value) onSelect(item.value);
+  }
+  trigger.addEventListener('click', () => { if (picker.isOpen) picker.close(); else picker.open(); });
+  trigger.addEventListener('keydown', event => {
+    if (event.key === 'Tab') { picker.close(); return; }
+    if (event.key === 'Escape' && !picker.isOpen) return;
+    if (!['ArrowDown', 'ArrowUp', 'Home', 'End', 'Enter', ' ', 'Escape'].includes(event.key)) return;
+    event.preventDefault(); event.stopPropagation();
+    if (event.key === 'Escape') { picker.close({ restoreFocus: true }); return; }
+    if (!picker.isOpen) {
+      picker.open();
+      if (event.key === 'Home') setActive(0);
+      if (event.key === 'End') setActive(items.length - 1);
+      return;
+    }
+    if (event.key === 'Enter' || event.key === ' ') { commit(items[activeIndex]); return; }
+    setActive(event.key === 'Home' ? 0 : event.key === 'End' ? items.length - 1 : activeIndex + (event.key === 'ArrowDown' ? 1 : -1));
+  });
+  document.addEventListener('pointerdown', event => { if (!root.contains(event.target)) picker.close(); });
+  root.addEventListener('focusout', event => { if (event.relatedTarget && !root.contains(event.relatedTarget)) picker.close(); });
+  document.addEventListener('scroll', event => { if (!list.contains(event.target)) picker.position(); }, true);
+  window.addEventListener('resize', picker.position);
+  window.visualViewport?.addEventListener('resize', picker.position);
+  window.visualViewport?.addEventListener('scroll', picker.position);
+  dialog?.addEventListener('close', () => picker.close());
+  dialog?.addEventListener('cancel', event => {
+    if (picker.isOpen) { event.preventDefault(); picker.close({ restoreFocus: true }); }
+  });
+  pickers.add(picker); return picker;
+}
+function enhanceSelect(select) {
+  const root = element('div', 'field-picker'), trigger = element('button', 'field-picker-trigger');
+  trigger.id = `${select.id}-button`; trigger.type = 'button';
+  const label = element('span'); label.id = `${select.id}-value`;
+  const list = element('div'); list.id = `${select.id}-list`; list.hidden = true;
+  const fieldLabel = $(`label[for="${select.id}"]`); fieldLabel.htmlFor = trigger.id;
+  trigger.setAttribute('role', 'combobox'); trigger.setAttribute('aria-haspopup', 'listbox');
+  trigger.setAttribute('aria-expanded', 'false'); trigger.setAttribute('aria-controls', list.id);
+  trigger.setAttribute('aria-labelledby', `${fieldLabel.id} ${label.id}`);
+  list.setAttribute('role', 'listbox'); list.setAttribute('aria-labelledby', fieldLabel.id);
+  trigger.append(label, icon('chevron')); root.append(trigger, list);
+  select.hidden = true; select.after(root);
+  const items = [...select.options].map(option => ({ value: option.value, label: option.label, section: option.parentElement.label }));
+  const picker = createPicker({ root, trigger, label, list, onSelect(value) {
+    select.value = value; sync();
+    select.dispatchEvent(new Event('input', { bubbles: true })); select.dispatchEvent(new Event('change', { bubbles: true }));
+  } });
+  function sync() { trigger.disabled = select.disabled; picker.setOptions(items, select.value); }
+  select.addEventListener('change', sync); sync();
+  return { sync };
+}
+function closePickers() { for (const picker of pickers) picker.close(); }
 function animateIn(nodes, { distance = 6, duration = 200, stagger = 0 } = {}) {
   if (motionPreference.matches) return;
   const elements = nodes instanceof Element ? [nodes] : [...nodes];
@@ -252,6 +392,7 @@ function openEditor(item = null) {
   $('#editor-title').textContent = item ? '编辑素材' : '添加素材';
   $('#editor-text').value = item?.text || '';
   $('#editor-type').value = item?.type || (state.filters.type !== 'all' ? state.filters.type : state.filters.group === 'trending' ? 'meme' : 'general');
+  formPickers.get('editor-type').sync();
   $('#editor-notes').value = item?.notes || ''; $('#editor-classic').checked = item?.isClassic || false;
   $('#editor-delete').hidden = !item; $('#editor-save').disabled = false;
   $('#editor-dialog').showModal(); $('#editor-text').focus();
@@ -335,7 +476,7 @@ function clearPreview() {
   inlineError('#import-error');
 }
 function switchImport(mode) {
-  state.importMode = mode; clearPreview();
+  closePickers(); state.importMode = mode; clearPreview();
   for (const tab of $$('[data-import-tab]')) {
     const active = tab.dataset.importTab === mode; tab.classList.toggle('active', active);
     tab.setAttribute('aria-selected', active); tab.tabIndex = active ? 0 : -1;
@@ -345,7 +486,9 @@ function switchImport(mode) {
 function openImport() {
   state.csvText = ''; $('#csv-file').value = ''; $('#file-name').textContent = '选择或拖入 CSV 文件';
   $('#paste-text').value = ''; $('#paste-tags').value = ''; $('#paste-type').value = state.filters.type !== 'all' ? state.filters.type : state.filters.group === 'trending' ? 'meme' : 'general';
-  $('#paste-difficulty').value = 'normal'; switchImport('csv'); $('#import-dialog').showModal();
+  $('#paste-difficulty').value = 'normal';
+  formPickers.get('paste-type').sync(); formPickers.get('paste-difficulty').sync();
+  switchImport('csv'); $('#import-dialog').showModal();
 }
 async function loadFile(file) {
   clearPreview(); state.csvText = ''; $('#file-name').textContent = '选择或拖入 CSV 文件';
@@ -405,8 +548,8 @@ async function previewImport() {
 }
 async function commitImport() {
   if (!state.importItems) return;
-  let succeeded = false;
-  const controls = $$('#import-dialog input, #import-dialog textarea, #import-dialog select, #import-dialog [data-import-tab], #preview-import, #commit-import');
+  closePickers(); let succeeded = false;
+  const controls = $$('#import-dialog input, #import-dialog textarea, #import-dialog select, #import-dialog .picker-trigger, #import-dialog [data-import-tab], #preview-import, #commit-import');
   controls.forEach(node => { node.disabled = true; }); inlineError('#import-error');
   try {
     const report = await api('/api/materials/import', { method: 'POST', body: JSON.stringify({ items: state.importItems }) });
@@ -451,7 +594,7 @@ function downloadExport(format) {
 }
 
 function showView(view) {
-  closeGameLibrary();
+  closePickers();
   if (view === 'library') exitFocus();
   state.view = view; $('#library-view').hidden = view !== 'library'; $('#game-view').hidden = view !== 'game';
   $('#nav-library').classList.toggle('active', view === 'library'); $('#nav-game').classList.toggle('active', view === 'game');
@@ -462,15 +605,13 @@ function showView(view) {
 }
 function gameHint() { return state.mode === 'relay' ? '只让当前比划者看题，再把动作传下去。' : '让猜题的人背对屏幕，再点击显示。'; }
 function renderGameLibraries() {
-  const list = $('#game-library-list'), wasOpen = !list.hidden;
-  const previousActive = gameLibraryItems[activeGameLibraryIndex]?.value;
+  const items = [];
   const selectedValue = state.filters.q.trim() ? 'current' : `${state.filters.group}:${state.filters.type}`;
-  gameLibraryItems = [];
   const add = (group, type, label) => {
     const count = filterMaterials(state.materials, { group, type }).length;
-    gameLibraryItems.push({ value: `${group}:${type}`, label, count, isGroup: type === 'all' });
+    items.push({ value: `${group}:${type}`, label, count, isGroup: type === 'all', isChild: type !== 'all' });
   };
-  if (selectedValue === 'current') gameLibraryItems.push({ value: 'current', label: '当前搜索', count: filtered().length, isGroup: true });
+  if (selectedValue === 'current') items.push({ value: 'current', label: '当前搜索', count: filtered().length, isGroup: true });
   add('all', 'all', '全部素材');
   for (const [group, label] of [['evergreen', '长盛不衰'], ['trending', '引领潮流'], ['classic', '经典永流传']]) {
     add(group, 'all', label);
@@ -478,62 +619,9 @@ function renderGameLibraries() {
       state.materials.some(item => item.isClassic && item.type === type) || (state.filters.group === group && state.filters.type === type));
     for (const type of types) add(group, type, TYPES[type]);
   }
-  const selected = gameLibraryItems.find(item => item.value === selectedValue) || gameLibraryItems[0];
-  $('#game-library-label').textContent = `${selected.label} · ${selected.count}`;
-  list.replaceChildren();
-  gameLibraryItems.forEach((item, index) => {
-    const option = element('div', `game-library-option${item.isGroup ? ' game-library-group' : ' game-library-child'}`);
-    option.id = `game-library-option-${index}`;
-    option.dataset.value = item.value;
-    option.setAttribute('role', 'option'); option.setAttribute('aria-selected', item.value === selected.value);
-    option.setAttribute('aria-label', `${item.label} · ${item.count}`);
-    option.append(element('span', 'game-library-option-label', item.label), element('span', 'game-library-count', String(item.count)), icon('check'));
-    option.addEventListener('pointerdown', event => { if (event.pointerType === 'mouse') event.preventDefault(); });
-    option.addEventListener('pointerenter', event => { if (event.pointerType === 'mouse') setActiveGameLibrary(index); });
-    option.addEventListener('click', () => selectGameLibrary(item.value));
-    list.append(option);
-  });
-  activeGameLibraryIndex = gameLibraryItems.findIndex(item => item.value === (wasOpen ? previousActive : selected.value));
-  if (activeGameLibraryIndex < 0) activeGameLibraryIndex = gameLibraryItems.indexOf(selected);
-  if (wasOpen) { positionGameLibrary(); setActiveGameLibrary(activeGameLibraryIndex); }
-}
-function setActiveGameLibrary(index) {
-  activeGameLibraryIndex = Math.max(0, Math.min(gameLibraryItems.length - 1, index));
-  const options = [...$('#game-library-list').children];
-  options.forEach((option, optionIndex) => option.classList.toggle('active', optionIndex === activeGameLibraryIndex));
-  if (!$('#game-library-list').hidden && options[activeGameLibraryIndex]) {
-    $('#game-library').setAttribute('aria-activedescendant', options[activeGameLibraryIndex].id);
-    options[activeGameLibraryIndex].scrollIntoView({ block: 'nearest' });
-  }
-}
-function positionGameLibrary() {
-  const list = $('#game-library-list');
-  if (list.hidden) return;
-  const rect = $('#game-library').getBoundingClientRect(), margin = 12, gap = 6;
-  const viewportHeight = window.visualViewport?.height || window.innerHeight;
-  const width = Math.min(Math.max(rect.width, 260), window.innerWidth - margin * 2);
-  const below = viewportHeight - rect.bottom - gap - margin, above = rect.top - gap - margin;
-  const placeAbove = below < Math.min(240, above);
-  list.style.width = `${width}px`;
-  list.style.left = `${Math.max(margin, Math.min(rect.left, window.innerWidth - width - margin))}px`;
-  list.style.maxHeight = `${Math.max(0, Math.min(400, placeAbove ? above : below))}px`;
-  list.style.top = `${placeAbove ? rect.top - gap - list.getBoundingClientRect().height : rect.bottom + gap}px`;
-}
-function openGameLibrary() {
-  const selectedIndex = [...$('#game-library-list').children].findIndex(option => option.getAttribute('aria-selected') === 'true');
-  $('#game-library-list').hidden = false;
-  $('#game-library').setAttribute('aria-expanded', 'true');
-  $('#game-library').focus({ preventScroll: true });
-  positionGameLibrary(); setActiveGameLibrary(selectedIndex);
-}
-function closeGameLibrary({ restoreFocus = false } = {}) {
-  $('#game-library-list').hidden = true;
-  $('#game-library').setAttribute('aria-expanded', 'false');
-  $('#game-library').removeAttribute('aria-activedescendant');
-  if (restoreFocus) $('#game-library').focus({ preventScroll: true });
+  gamePicker.setOptions(items, selectedValue);
 }
 function selectGameLibrary(value) {
-  closeGameLibrary({ restoreFocus: true });
   if (value === 'current') return;
   const [group, type] = value.split(':'); chooseCategory(group, type); renderGame();
 }
@@ -571,7 +659,7 @@ function renderGame() {
 }
 function startRound() { state.round = new DrawRound(filtered()); renderGame(); }
 async function toggleFocus() {
-  closeGameLibrary();
+  closePickers();
   if (document.body.classList.contains('focus-mode')) return exitFocus();
   document.body.classList.add('focus-mode'); $('#fullscreen-button').setAttribute('aria-label', '退出全屏');
   $('#fullscreen-button').title = '退出全屏';
@@ -584,6 +672,12 @@ async function exitFocus() {
   if (document.fullscreenElement) { try { await document.exitFullscreen(); } catch {} }
   nativeFullscreen = false;
 }
+
+const formPickers = new Map($$('[data-web-select]').map(select => [select.id, enhanceSelect(select)]));
+const gamePicker = createPicker({
+  root: $('#game-library-picker'), trigger: $('#game-library'), label: $('#game-library-label'),
+  list: $('#game-library-list'), minWidth: 260, onSelect: selectGameLibrary,
+});
 
 $('#header-add').addEventListener('click', () => openEditor()); $('#mobile-add').addEventListener('click', () => openEditor());
 $('#editor-form').addEventListener('submit', saveEditor);
@@ -636,30 +730,12 @@ for (const node of $$('#paste-panel input, #paste-panel select, #paste-panel tex
 $('#preview-import').addEventListener('click', previewImport); $('#commit-import').addEventListener('click', commitImport);
 for (const node of $$('[data-export]')) node.addEventListener('click', () => downloadExport(node.dataset.export));
 $('#nav-library').addEventListener('click', () => showView('library')); $('#nav-game').addEventListener('click', () => showView('game'));
-$('#game-library').addEventListener('click', () => {
-  if ($('#game-library-list').hidden) openGameLibrary(); else closeGameLibrary();
-});
-$('#game-library').addEventListener('keydown', event => {
-  const open = !$('#game-library-list').hidden;
-  if (event.key === 'Tab') { closeGameLibrary(); return; }
-  if (!['ArrowDown', 'ArrowUp', 'Home', 'End', 'Enter', ' ', 'Escape'].includes(event.key)) return;
-  event.preventDefault(); event.stopPropagation();
-  if (event.key === 'Escape') { closeGameLibrary({ restoreFocus: true }); return; }
-  if (!open) { openGameLibrary(); if (event.key === 'Home') setActiveGameLibrary(0); if (event.key === 'End') setActiveGameLibrary(gameLibraryItems.length - 1); return; }
-  if (event.key === 'Enter' || event.key === ' ') { selectGameLibrary(gameLibraryItems[activeGameLibraryIndex].value); return; }
-  const index = event.key === 'Home' ? 0 : event.key === 'End' ? gameLibraryItems.length - 1 : activeGameLibraryIndex + (event.key === 'ArrowDown' ? 1 : -1);
-  setActiveGameLibrary(index);
-});
-document.addEventListener('pointerdown', event => { if (!$('#game-library-picker').contains(event.target)) closeGameLibrary(); });
-$('#game-library-picker').addEventListener('focusout', event => { if (event.relatedTarget && !event.currentTarget.contains(event.relatedTarget)) closeGameLibrary(); });
-window.addEventListener('resize', positionGameLibrary);
-window.visualViewport?.addEventListener('resize', positionGameLibrary);
 $('#restart-round').addEventListener('click', () => { state.round = null; renderGame(); });
 $('#fullscreen-button').addEventListener('click', toggleFocus);
 for (const node of $$('.mode-button')) node.addEventListener('click', () => { state.mode = node.dataset.mode; renderGame(); });
 document.addEventListener('fullscreenchange', () => { if (!document.fullscreenElement && nativeFullscreen) exitFocus(); });
 document.addEventListener('keydown', event => {
-  if (state.view !== 'game' || $('dialog[open]') || event.repeat || event.defaultPrevented || event.target.closest('.game-library-picker')) return;
+  if (state.view !== 'game' || $('dialog[open]') || event.repeat || event.defaultPrevented || event.target.closest('.web-picker')) return;
   if (event.key === 'Escape') { exitFocus(); return; }
   if (event.target.closest('input,textarea,select,[contenteditable="true"]')) return;
   if (event.target.closest('button,a') && !event.target.closest('#game-stage')) return;

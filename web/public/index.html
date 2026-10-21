@@ -105,7 +105,7 @@
     <form id="editor-form">
       <div class="modal-heading"><h2 id="editor-title">添加素材</h2><button class="icon-button" type="button" data-close="editor-dialog" aria-label="关闭"><svg class="icon"><use href="#i-close"/></svg></button></div>
       <label class="field"><span>题目 <span class="required">*</span></span><textarea id="editor-text" name="text" rows="4" maxlength="10000" placeholder="一个词、一句歌词，或一个让人笑出声的梗" required></textarea></label>
-      <label class="field"><span>分类</span><select id="editor-type" name="type"><optgroup label="长盛不衰"><option value="poetry">诗词</option><option value="general">经典词语</option><option value="sentence">经典句子</option></optgroup><optgroup label="引领潮流"><option value="meme">梗句</option><option value="lyrics">歌词</option></optgroup></select></label>
+      <div class="field"><label id="editor-type-name" for="editor-type">分类</label><select id="editor-type" name="type" data-web-select><optgroup label="长盛不衰"><option value="poetry">诗词</option><option value="general">经典词语</option><option value="sentence">经典句子</option></optgroup><optgroup label="引领潮流"><option value="meme">梗句</option><option value="lyrics">歌词</option></optgroup></select></div>
       <label class="field"><span>备注</span><textarea id="editor-notes" name="notes" rows="2" maxlength="2000" placeholder="歌名、出处，或玩法提示（可选）"></textarea></label>
       <label class="checkbox-label"><input id="editor-classic" name="isClassic" type="checkbox"><svg class="icon"><use href="#i-star"/></svg>收进经典永流传</label>
       <p id="editor-error" class="form-error" role="alert" hidden></p>
@@ -129,7 +129,10 @@
     </div>
     <div id="paste-panel" role="tabpanel" aria-labelledby="tab-paste" hidden>
       <label class="field"><span>一行一条</span><textarea id="paste-text" rows="6" placeholder="孙悟空&#10;星星&#10;命运的齿轮开始转动了"></textarea></label>
-      <div class="field-pair"><label class="field"><span>统一分类</span><select id="paste-type"><optgroup label="长盛不衰"><option value="poetry">诗词</option><option value="general">经典词语</option><option value="sentence">经典句子</option></optgroup><optgroup label="引领潮流"><option value="meme">梗句</option><option value="lyrics">歌词</option></optgroup></select></label><label class="field"><span>统一难度</span><select id="paste-difficulty"><option value="easy">简单</option><option value="normal" selected>普通</option><option value="hard">挑战</option></select></label></div>
+      <div class="field-pair">
+        <div class="field"><label id="paste-type-name" for="paste-type">统一分类</label><select id="paste-type" data-web-select><optgroup label="长盛不衰"><option value="poetry">诗词</option><option value="general">经典词语</option><option value="sentence">经典句子</option></optgroup><optgroup label="引领潮流"><option value="meme">梗句</option><option value="lyrics">歌词</option></optgroup></select></div>
+        <div class="field"><label id="paste-difficulty-name" for="paste-difficulty">统一难度</label><select id="paste-difficulty" data-web-select><option value="easy">简单</option><option value="normal" selected>普通</option><option value="hard">挑战</option></select></div>
+      </div>
       <label class="field"><span>标签</span><input id="paste-tags" placeholder="用顿号或逗号分隔（可选）"></label>
     </div>
     <p id="import-error" class="form-error" role="alert" hidden></p>
