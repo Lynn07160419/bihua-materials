@@ -104,14 +104,18 @@ input::placeholder,textarea::placeholder{color:#747977}
 #selection-count{white-space:nowrap}
 
 /* 页面保持一屏，素材在列表内部滚动。 */
-.material-grid{--material-columns:3;--material-row-height:60px;--material-heading-height:26px;--material-group-gap:8px;flex:1;min-height:0;overflow-y:hidden;overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:#b4bbb9 transparent;padding-right:6px}
+.material-grid{--material-columns:3;--material-row-height:68px;--material-heading-height:26px;--material-group-gap:8px;flex:1;min-height:0;overflow-y:hidden;overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:#b4bbb9 transparent;padding-right:6px}
 .material-grid.expanded{overflow-y:auto}
 .material-grid:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 .material-group+.material-group{margin-top:var(--material-group-gap)}
+.material-group{--note-paper:#f0e5c5}
+.material-group[data-type="lyrics"],.material-group[data-type="poetry"]{--note-paper:#ead9d2}
+.material-group[data-type="general"]{--note-paper:#d8e2e3}
+.material-group[data-type="sentence"]{--note-paper:#eee4cf}
 .material-group-heading{display:flex;align-items:center;gap:12px;height:var(--material-heading-height);font-size:15px;font-weight:650;line-height:1;color:var(--ink)}
 .material-group-heading:after{content:"";flex:1;border-top:1px solid var(--line)}
-.material-group-grid{display:grid;grid-template-columns:repeat(var(--material-columns),minmax(0,1fr));grid-auto-rows:var(--material-row-height);gap:0 24px}
-.material-card{display:flex;align-items:center;gap:6px;position:relative;min-width:0;min-height:0;padding:2px 0;border-bottom:1px solid var(--line);overflow:hidden}
+.material-group-grid{display:grid;grid-template-columns:repeat(var(--material-columns),minmax(0,1fr));grid-auto-rows:var(--material-row-height);gap:0 12px}
+.material-card{display:flex;align-items:center;gap:6px;position:relative;min-width:0;min-height:0;margin-bottom:8px;padding:6px 12px;background:var(--note-paper);border:0;border-radius:3px;box-shadow:0 1px 3px #35332912;overflow:hidden;transition:box-shadow .16s ease}
 .type-label{display:inline-flex;align-items:center;font-size:13px;font-weight:550;color:var(--muted)}
 .favorite-button{width:28px;height:28px;color:#858e90}
 .favorite-button .icon{width:18px;height:18px}
@@ -123,7 +127,7 @@ input::placeholder,textarea::placeholder{color:#747977}
 .card-open:hover .card-text{color:var(--accent)}
 .card-choice{display:flex;align-items:center;justify-content:center;width:18px;min-height:28px;flex:none;cursor:pointer}
 .material-checkbox{width:18px;height:18px;margin:0;accent-color:var(--accent);flex:none;cursor:pointer}
-.material-card.selected-material{border-bottom:2px solid var(--accent)}
+.material-card.selected-material{box-shadow:inset 0 0 0 2px var(--accent),0 1px 3px #35332912}
 .selected-material .card-text{color:var(--accent)}
 .load-more-wrap{display:flex;align-items:center;justify-content:center;flex:none;margin-top:6px;line-height:0}
 .load-more-wrap .button{min-height:30px;padding:4px 18px;font-size:13px;line-height:1.5}
@@ -250,10 +254,10 @@ input::placeholder,textarea::placeholder{color:#747977}
   .search-box{grid-column:1 / -1;grid-row:2;height:36px}
   .selection-tools{width:100%;gap:0 12px}
   .selection-tools .text-button{font-size:13px}
-  .material-grid{--material-columns:2;--material-row-height:62px;padding-right:3px}
-  .material-group-grid{column-gap:18px}
+  .material-grid{--material-columns:2;--material-row-height:72px;padding-right:3px}
+  .material-group-grid{column-gap:10px}
   .type-label{font-size:12px}
-  .material-card{padding-block:4px}
+  .material-card{padding:6px 10px}
   .card-top{min-height:26px}
   .load-more-wrap{margin-top:4px;min-height:40px}
   .load-more-wrap .button{font-size:12px;min-height:28px}
@@ -332,7 +336,8 @@ input::placeholder,textarea::placeholder{color:#747977}
   .library-heading{min-height:32px;margin-bottom:4px}
   .library-actions .button{min-height:30px;padding-block:4px}
   .search-box{height:32px}
-  .material-grid{--material-row-height:52px;--material-heading-height:20px;--material-group-gap:4px}
+  .material-grid{--material-row-height:60px;--material-heading-height:20px;--material-group-gap:4px}
+  .material-card{padding-block:2px}
   .load-more-wrap{min-height:36px;margin-top:4px}
   .mobile-add{width:36px;height:36px;bottom:10px}
   .empty-state{padding:8px}

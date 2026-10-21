@@ -358,6 +358,7 @@ function renderLibrary({ animate = false, fromIndex = 0 } = {}) {
     const shown = group.items.slice(0, remaining);
     remaining -= shown.length;
     const section = element('section', 'material-group');
+    section.dataset.type = group.type;
     section.setAttribute('aria-label', TYPES[group.type]);
     if (group.showTitle) section.append(element('h3', 'material-group-heading', TYPES[group.type]));
     const cards = element('div', 'material-group-grid');
