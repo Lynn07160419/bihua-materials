@@ -143,11 +143,11 @@ test('共享素材 API：录入、筛选、修改、导入、导出与持久化'
   });
 });
 
-test('首批题库包含 160 条来源素材与 3 条演示；词语与句子分类清晰且不重复', async () => {
+test('首批题库包含 175 条来源素材与 3 条演示；词语与句子分类清晰且不重复', async () => {
   const app = await start(':memory:', true);
   try {
     const { data } = await app.request('/api/materials');
-    assert.equal(data.items.length, 163); assert.equal(data.items.filter(item => item.isDemo).length, 3);
+    assert.equal(data.items.length, 178); assert.equal(data.items.filter(item => item.isDemo).length, 3);
     assert.equal(data.items.filter(item => item.isClassic).length, 0);
     assert.equal(data.items.find(item => item.text === '北').type, 'general');
     assert.equal(data.items.find(item => item.text === '不烧心，规矩不能坏').type, 'meme');
@@ -166,7 +166,7 @@ test('首批题库包含 160 条来源素材与 3 条演示；词语与句子分
     assert.equal(data.items.some(item => item.text === '风把云朵吹响远方' || item.text === '连展'), false);
     assert.equal(data.items.filter(item => item.text === '星星').length, 1);
     assert.equal(data.items.filter(item => item.type === 'general').length, 103);
-    assert.equal(data.items.filter(item => item.type === 'sentence').length, 11);
+    assert.equal(data.items.filter(item => item.type === 'sentence').length, 13);
     assert.equal(data.items.some(item => item.text === '北京大学爱心社手语分社'), false);
     const multiline = data.items.find(item => item.notes === '歌曲：《小美满》');
     assert.equal(multiline.type, 'lyrics');
