@@ -69,7 +69,7 @@
         <div class="library-heading">
           <div class="heading-title"><h2 id="library-title">所有素材</h2><span id="result-count" class="result-count" aria-live="polite">…</span></div>
           <label class="search-box"><svg class="icon"><use href="#i-search"/></svg><span class="sr-only">搜索素材</span><input id="search" type="search" placeholder="搜个词，找点灵感" autocomplete="off"></label>
-          <div class="library-actions"><button class="button button-plain" id="selection-toggle" type="button" aria-pressed="false">多选</button><button class="button button-plain" id="export-open" type="button"><svg class="icon"><use href="#i-download"/></svg>导出</button><button class="button button-plain" id="import-open" type="button"><svg class="icon"><use href="#i-upload"/></svg>批量导入</button></div>
+          <div class="library-actions"><button class="button button-plain" id="selection-toggle" type="button" aria-pressed="false">多选</button><button class="button button-plain" id="export-open" type="button"><svg class="icon"><use href="#i-download"/></svg>导出</button><button class="button button-plain" id="import-open" type="button"><svg class="icon"><use href="#i-upload"/></svg>导入</button></div>
         </div>
         <div id="selection-tools" class="selection-tools" hidden><span id="selection-count" aria-live="polite">已选 0 条</span><button class="text-button" id="select-results" type="button">全选当前结果</button><button class="text-button" id="clear-selection" type="button">清空选择</button><button class="text-button selection-delete" id="delete-selected" type="button" disabled>删除所选</button></div>
         <div id="material-grid" class="material-grid" role="region" aria-label="素材浏览区" tabindex="0" aria-live="polite"><p class="loading">正在打开题库…</p></div>
@@ -119,7 +119,7 @@
   </dialog>
 
   <dialog id="import-dialog" class="modal import-modal" aria-labelledby="import-title">
-    <div class="modal-heading"><h2 id="import-title">批量导入</h2><button class="icon-button" type="button" data-close="import-dialog" aria-label="关闭"><svg class="icon"><use href="#i-close"/></svg></button></div>
+    <div class="modal-heading"><h2 id="import-title">导入</h2><button class="icon-button" type="button" data-close="import-dialog" aria-label="关闭"><svg class="icon"><use href="#i-close"/></svg></button></div>
     <div class="import-tabs" role="tablist" aria-label="导入方式"><button id="tab-csv" class="import-tab active" role="tab" aria-selected="true" aria-controls="csv-panel" data-import-tab="csv" type="button">CSV 文件</button><button id="tab-paste" class="import-tab" role="tab" aria-selected="false" aria-controls="paste-panel" data-import-tab="paste" type="button">批量粘贴</button></div>
     <div id="csv-panel" role="tabpanel" aria-labelledby="tab-csv">
       <label class="dropzone" id="dropzone"><input type="file" id="csv-file" accept=".csv,text/csv" class="sr-only"><svg class="icon"><use href="#i-upload"/></svg><strong id="file-name">选择或拖入 CSV 文件</strong><span>最大 5 MB</span></label>

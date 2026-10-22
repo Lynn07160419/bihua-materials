@@ -143,16 +143,16 @@ test('共享素材 API：录入、筛选、修改、导入、导出与持久化'
   });
 });
 
-test('首批题库包含 175 条来源素材与 3 条演示；词语与句子分类清晰且不重复', async () => {
+test('整理后的题库包含 166 条来源素材与 3 条演示；保留修改与删除结果', async () => {
   const app = await start(':memory:', true);
   try {
     const { data } = await app.request('/api/materials');
-    assert.equal(data.items.length, 178); assert.equal(data.items.filter(item => item.isDemo).length, 3);
+    assert.equal(data.items.length, 169); assert.equal(data.items.filter(item => item.isDemo).length, 3);
     assert.equal(data.items.filter(item => item.isClassic).length, 0);
     assert.equal(data.items.find(item => item.text === '北').type, 'general');
-    assert.equal(data.items.find(item => item.text === '不烧心，规矩不能坏').type, 'meme');
+    assert.equal(data.items.find(item => item.text === '烧心').type, 'meme');
     assert.equal(data.items.find(item => item.text === '你我怎么两清怎么忍心').type, 'lyrics');
-    assert.equal(data.items.filter(item => item.type === 'lyrics').length, 26);
+    assert.equal(data.items.filter(item => item.type === 'lyrics').length, 27);
     assert.equal(data.items.find(item => item.text === '司马光').type, 'general');
     assert.equal(data.items.find(item => item.text === '屋檐雨落滴滴答，新生希望在枝桠').type, 'lyrics');
     assert.equal(data.items.find(item => item.text === '这世界有那么多人，多幸运我有个我们').type, 'lyrics');
@@ -161,12 +161,16 @@ test('首批题库包含 175 条来源素材与 3 条演示；词语与句子分
     assert.equal(data.items.find(item => item.text === '前人栽树，后人乘凉').type, 'sentence');
     assert.equal(data.items.find(item => item.text === '十年树木百年树人').type, 'sentence');
     assert.equal(data.items.find(item => item.text === '马到成功').type, 'general');
-    assert.equal(data.items.find(item => item.text === '我们一起去图书馆看书').type, 'sentence');
-    assert.equal(data.items.find(item => item.text === '风把云朵吹向远方').type, 'sentence');
+    assert.equal(data.items.find(item => item.text === '手语为桥，心意相通').type, 'sentence');
+    assert.equal(data.items.find(item => item.text === '红楼飞雪，一时英杰').type, 'lyrics');
+    assert.equal(data.items.find(item => item.text === '先哲曾书写，爱国进步民主科学').type, 'lyrics');
+    for (const text of ['再让我听见新三国的梗我就扎聋自己的耳朵', '不烧心，规矩不能坏', '红楼飞雪，一时英杰，先哲曾书写，爱国进步民主科学', '我们一起去图书馆看书', '大家互相帮忙完成任务', '周末结伴去山里看风景', '朋友送给我一份小礼物', '下雨天记得小心走路', '演员在台上表演舞蹈', '傍晚的晚霞十分好看', '我们合作完成这次活动', '风把云朵吹向远方']) {
+      assert.equal(data.items.some(item => item.text === text), false, `不应重新加入已删除或替换的素材：${text}`);
+    }
     assert.equal(data.items.some(item => item.text === '风把云朵吹响远方' || item.text === '连展'), false);
     assert.equal(data.items.filter(item => item.text === '星星').length, 1);
     assert.equal(data.items.filter(item => item.type === 'general').length, 103);
-    assert.equal(data.items.filter(item => item.type === 'sentence').length, 13);
+    assert.equal(data.items.filter(item => item.type === 'sentence').length, 4);
     assert.equal(data.items.some(item => item.text === '北京大学爱心社手语分社'), false);
     const multiline = data.items.find(item => item.notes === '歌曲：《小美满》');
     assert.equal(multiline.type, 'lyrics');
