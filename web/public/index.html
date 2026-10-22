@@ -146,7 +146,16 @@
     <button class="export-option" data-export="csv" type="button"><span><strong>完整表格</strong><span class="export-sample">保留类型、标签、备注等信息</span></span><span class="file-label">CSV<svg class="icon"><use href="#i-download"/></svg></span></button>
   </dialog>
 
-  <dialog id="delete-dialog" class="modal delete-modal" aria-labelledby="delete-title"><div class="modal-heading"><h2 id="delete-title">删除这条素材？</h2><button class="icon-button" type="button" data-close="delete-dialog" aria-label="取消删除"><svg class="icon"><use href="#i-close"/></svg></button></div><p id="delete-text" class="delete-text"></p><p id="delete-error" class="form-error" role="alert" hidden></p><div class="modal-footer"><span class="spacer"></span><button class="button button-plain" type="button" data-close="delete-dialog">取消</button><button class="button button-danger" id="confirm-delete" type="button">确认删除</button></div></dialog>
+  <dialog id="delete-dialog" class="modal delete-modal" aria-labelledby="delete-title">
+    <form id="delete-form">
+      <div class="modal-heading"><h2 id="delete-title">删除权限验证</h2><button class="icon-button" type="button" data-close="delete-dialog" aria-label="取消删除"><svg class="icon"><use href="#i-close"/></svg></button></div>
+      <p id="delete-text" class="delete-text"></p>
+      <label class="field"><span>姓名／昵称</span><input id="delete-name" name="name" autocomplete="nickname" maxlength="60" placeholder="请输入姓名或昵称" required></label>
+      <label class="field"><span>管理员密码</span><input id="delete-password" name="password" type="password" autocomplete="off" maxlength="1024" placeholder="请输入管理员密码" required></label>
+      <p id="delete-error" class="form-error" role="alert" hidden></p>
+      <div class="modal-footer"><span class="spacer"></span><button class="button button-plain" type="button" data-close="delete-dialog">取消</button><button class="button button-danger" id="confirm-delete" type="submit">验证并删除</button></div>
+    </form>
+  </dialog>
   <div id="toast" class="toast" role="status" hidden></div>
 </body>
 </html>
