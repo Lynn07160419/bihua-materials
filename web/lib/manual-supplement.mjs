@@ -24,6 +24,7 @@ export const manualSupplement = [
   { text: '轻松绷住', type: 'meme', tags: [] },
   { text: '浪子踢球', type: 'meme', tags: [] },
   { text: '先哲曾书写，爱国进步民主科学', type: 'lyrics', tags: [], notes: '歌曲：《燕园情》' },
+  { text: '七步洗手法', type: 'meme', tags: [] },
 ].map(item => ({
   difficulty: 'normal', notes: '', source: '用户补充', isClassic: false, isDemo: false, ...item,
 }));

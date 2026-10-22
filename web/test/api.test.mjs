@@ -143,11 +143,11 @@ test('共享素材 API：录入、筛选、修改、导入、导出与持久化'
   });
 });
 
-test('整理后的题库包含 166 条来源素材与 3 条演示；保留修改与删除结果', async () => {
+test('整理后的题库包含 167 条来源素材与 3 条演示；保留修改与删除结果', async () => {
   const app = await start(':memory:', true);
   try {
     const { data } = await app.request('/api/materials');
-    assert.equal(data.items.length, 169); assert.equal(data.items.filter(item => item.isDemo).length, 3);
+    assert.equal(data.items.length, 170); assert.equal(data.items.filter(item => item.isDemo).length, 3);
     assert.equal(data.items.filter(item => item.isClassic).length, 0);
     assert.equal(data.items.find(item => item.text === '北').type, 'general');
     assert.equal(data.items.find(item => item.text === '烧心').type, 'meme');
